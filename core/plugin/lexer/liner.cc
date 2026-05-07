@@ -8,6 +8,7 @@ static const std::unordered_map<std::string, TokenType> keywords = {
     {"file", TokenType::FILE},
     {"device", TokenType::DEVICE},
     {"led", TokenType::LED},
+    {"buzzer", TokenType::BUZZER},
     {"button", TokenType::BUTTON},
     {"pin", TokenType::PIN},
     {"name", TokenType::NAME},

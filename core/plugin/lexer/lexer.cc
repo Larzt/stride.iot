@@ -10,6 +10,7 @@ std::vector<Token> tokenize(const std::string &line) {
 std::ostream &operator<<(std::ostream &out, TokenType type) {
     switch (type) {
         case TokenType::LED:                out << "LED"; break;
+        case TokenType::BUZZER:             out << "BUZZER"; break;
         case TokenType::BUTTON:             out << "BUTTON"; break;
         case TokenType::PIN:                out << "PIN"; break;
         case TokenType::NAME:               out << "NAME"; break;

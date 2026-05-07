@@ -125,6 +125,21 @@ void testDeviceLedDeclaration(TestRunner &runner)
   check_token(runner, tokens[8], TokenType::NUMBER, "16", "number");
 }
 
+void testDeviceBuzzerDeclaration(TestRunner &runner)
+{
+  runner.setTest("Device declaration");
+
+  auto tokens = tokenize("device=buzzer name=mybuz pin=14");
+
+  check_token(runner, tokens[0], TokenType::DEVICE, "device", "device");
+  check_token(runner, tokens[2], TokenType::BUZZER, "buzzer", "buzzer");
+  check_token(runner, tokens[3], TokenType::NAME, "name", "name");
+  check_token(runner, tokens[5], TokenType::IDENTIFIER, "mybuz", "identifier");
+
+  check_token(runner, tokens[6], TokenType::PIN, "pin", "pin");
+  check_token(runner, tokens[8], TokenType::NUMBER, "14", "number");
+}
+
 void testDeviceButtonDeclaration(TestRunner &runner)
 {
   runner.setTest("Device declaration");
@@ -278,6 +293,7 @@ int main()
   testPrintTokens(runner);
   testI2CTokens(runner);
   testDeviceLedDeclaration(runner);
+  testDeviceBuzzerDeclaration(runner);
   testDeviceButtonDeclaration(runner);
   testProgramScenarios(runner);
 

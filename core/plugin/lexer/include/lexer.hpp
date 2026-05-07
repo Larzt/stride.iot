@@ -11,6 +11,7 @@ enum class TokenType
   DEVICE,
   PIN,
   BUTTON,
+  BUZZER,
   LED,
   NAME,
   WRITE,
@@ -65,6 +66,8 @@ struct Token
     {
     case TokenType::LED:
       return "LED";
+    case TokenType::BUZZER:
+      return "BUZZER";
     case TokenType::BUTTON:
       return "BUTTON";
     case TokenType::PIN:

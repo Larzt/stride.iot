@@ -33,6 +33,7 @@ struct Blackboard
   // Global buttons
   static inline gpio_num_t LeftButton = GPIO_NUM_32;
   static inline gpio_num_t RightButton = GPIO_NUM_16;
+  static inline gpio_num_t EnterButton = GPIO_NUM_33;
 
   // System
   static inline int ReloadTimePressed = 2000;

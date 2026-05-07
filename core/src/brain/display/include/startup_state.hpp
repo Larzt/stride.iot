@@ -49,7 +49,7 @@ public:
   }
 
   void on_exit(Display &ctx) override {}
-  std::string get_name() const override { return "STARTUP"; }
+  StateType get_type() const override { return StateType::Startup; }
 
 private:
   uint32_t _startTime = 0;

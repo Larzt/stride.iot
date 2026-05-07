@@ -12,6 +12,12 @@ enum class ServerMode
   Production
 };
 
+enum class StateType {
+  Startup,
+  Main,
+  View,
+};
+
 enum class InputType
 {
   Button,

@@ -8,12 +8,10 @@ void pcf8574_task(void *pvParameters)
   {
     // Encender LED P0
     pcf8574_write(0xFE);
-    printf("Task: LED ON\n");
     vTaskDelay(pdMS_TO_TICKS(500));
 
     // Apagar LED P0
     pcf8574_write(0xFF);
-    printf("Task: LED OFF\n");
     vTaskDelay(pdMS_TO_TICKS(500));
   }
 }

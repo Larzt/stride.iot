@@ -5,6 +5,7 @@ void display_task(void *pvParameters)
 {
   StrideButton left_button(Blackboard::LeftButton);
   StrideButton right_button(Blackboard::RightButton);
+  StrideButton enter_button(Blackboard::EnterButton);
 
   Display::Instance().begin();
   Display::Instance().transition_to(std::make_unique<StartupState>());

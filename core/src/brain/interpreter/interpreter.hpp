@@ -15,6 +15,7 @@
 
 #include "stride_led.hpp"
 #include "stride_button.hpp"
+#include "stride_buzzer.hpp"
 #include "stride_logger.hpp"
 
 class Interpreter
@@ -67,6 +68,7 @@ private:
   // Variables
   StrideVariable<int> _variables;
   StrideVariable<StrideLed *> _leds;
+  StrideVariable<StrideBuzzer *> _buzzers;
   StrideVariable<StrideButton *> _buttons;
   std::atomic<bool> endless_loop{true};
 };

@@ -52,6 +52,21 @@ public:
 
     _cursor_subscription = _cursor_position.subscribe([this, &ctx](int)
                                                       { draw_files(ctx); });
+
+    _cursor_subscription = _cursor_position.subscribe([this](int)
+                                                      {
+      if (_files.empty())
+      {
+        return;
+      }
+
+      int idx = _cursor_position.get();
+      if (idx < 0 || idx >= (int)_files.size())
+      {
+        return;
+      }
+
+      Blackboard::CurrentLoadProgramFile.set(_files[idx]); });
   }
 
   void on_exit(Display &ctx) override
@@ -118,7 +133,7 @@ public:
     }
   }
 
-  std::string get_name() const override { return "MAIN"; }
+  StateType get_type() const override { return StateType::Main; }
 
 private:
   std::vector<std::string> _files;

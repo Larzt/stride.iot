@@ -227,6 +227,12 @@ void Interpreter::load_device_command(const std::vector<Token> &tokens)
       StrideButton *btn = new StrideButton((gpio_num_t)pin);
       _buttons[name] = btn;
     }
+    else if (device_type == TokenType::BUZZER)
+    {
+      StrideLogger::Log(StrideSubsystem::Interpreter, "Creating BUZZER %s on pin %d", name.c_str(), pin);
+      StrideBuzzer *bzr = new StrideBuzzer((gpio_num_t)pin);
+      _buzzers[name] = bzr;
+    }
     else
     {
       StrideLogger::Error(StrideSubsystem::Interpreter, "Unknown device type for '%s'", name.c_str());
@@ -290,24 +296,41 @@ void Interpreter::execute_write_command(const std::vector<Token> &tokens)
   std::string name = tokens[2].value;
   std::string state = tokens[3].value;
 
-  if (_leds.find(name) == _leds.end())
+  bool value = (state == "on");
+
+  if (_leds.find(name) != _leds.end())
   {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "Led %s not found", name.c_str());
+    StrideLed *led = _leds[name];
+
+    if (value)
+    {
+      led->on();
+    }
+    else
+    {
+      led->off();
+    }
+    StrideLogger::Log(StrideSubsystem::Interpreter, "Led %s -> %s", name.c_str(), state.c_str());
     return;
   }
 
-  StrideLed *led = _leds[name];
-
-  // StrideLogger::Log(StrideSubsystem::Interpreter, "Writing %s to %s", state.c_str(), name.c_str());
-
-  if (state == "on")
+  if (_buzzers.find(name) != _buzzers.end())
   {
-    led->on();
+    StrideBuzzer *buzzer = _buzzers[name];
+
+    if (value)
+    {
+      buzzer->on();
+    }
+    else
+    {
+      buzzer->off();
+    }
+    StrideLogger::Log(StrideSubsystem::Interpreter, "Buzzer %s -> %s", name.c_str(), state.c_str());
+    return;
   }
-  else if (state == "off")
-  {
-    led->off();
-  }
+
+  StrideLogger::Error(StrideSubsystem::Interpreter, "Device %s not found", name.c_str());
 }
 
 void Interpreter::execute_wait_command(const std::vector<Token> &tokens)

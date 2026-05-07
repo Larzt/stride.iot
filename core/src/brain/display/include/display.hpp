@@ -41,7 +41,7 @@ public:
   virtual void on_enter(Display &ctx) = 0;
   virtual void on_update(Display &ctx) = 0;
   virtual void on_exit(Display &ctx) = 0;
-  virtual std::string get_name() const = 0;
+  virtual StateType get_type() const = 0;
   virtual void on_input(const InputEvent& event) {}
 };
 

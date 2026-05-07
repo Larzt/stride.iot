@@ -10,6 +10,7 @@ idf_component_register(
   "types"
   "tasks"
   "utils"
+  "utils/parse"
   "utils/sink"
   "utils/hexer"
   "tasks/include"
