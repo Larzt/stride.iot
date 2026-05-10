@@ -1,0 +1,26 @@
+name: ESP-IDF Build Validation
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:release-v5.5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Build
+        run: |
+          git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
+
+          . $IDF_PATH/export.sh
+
+          rm -rf build sdkconfig
+
+          idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults" \
+                 -DCONFIG_ESPTOOLPY_FLASHSIZE=4MB \
+                 set-target esp32 build
