@@ -1,7 +1,6 @@
 docker_build.sh
 
-# Archivos temporales de activación de ESP-IDF
-# Temporales de ESP-IDF
+# Temporal ESP-IDF
 esp_idf_activate_larzt/
 tmp*
 sdkconfig
@@ -31,7 +30,7 @@ cmake_install.cmake
 # Partition table
 partition_table/*.bin
 
-# Python virtual environments (si usas entorno virtual con idf.py)
+# Python virtual environments
 .venv/
 venv/
 env/
@@ -63,6 +62,9 @@ dist/
 Thumbs.db
 
 # Constants
-/main/consts/credentials.h
+/src/consts/credentials.h
 config.json
 compile_commands.json
+
+# Tests
+*.o

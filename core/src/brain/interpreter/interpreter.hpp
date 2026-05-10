@@ -1,0 +1,74 @@
+#pragma once
+
+#include <string>
+#include <vector>
+#include <map>
+#include <atomic>
+#include <sstream>
+
+#include "lexer.hpp"
+#include "sink.hpp"
+#include "hexer.hpp"
+
+#include "blackboard.hpp"
+#include "types.hpp"
+
+#include "stride_led.hpp"
+#include "stride_button.hpp"
+#include "stride_buzzer.hpp"
+#include "stride_logger.hpp"
+
+class Interpreter
+{
+public:
+  static Interpreter &Instance()
+  {
+    static Interpreter instance;
+    return instance;
+  }
+
+  void execute(const StrideProgram &program);
+
+  inline void start_endless_loop() { endless_loop.store(true); }
+  inline void stop_endless_loop() { endless_loop.store(false); }
+
+private:
+  Interpreter() = default;
+  ~Interpreter() = default;
+
+  Interpreter(const Interpreter &) = delete;
+  Interpreter &operator=(const Interpreter &) = delete;
+
+  void executeLogfile(const std::vector<Token> &tokens);
+  void execute_simple_block_command(const std::vector<Token> &tokens);
+  void execute_range(const StrideProgram& program, size_t start, size_t end);
+
+  // Simple commands
+  void load_device_command(const std::vector<Token> &tokens);
+  int resolve_value(const Token &token);
+  void execute_write_command(const std::vector<Token> &tokens);
+  void execute_wait_command(const std::vector<Token> &tokens);
+  void execute_print_command(const std::vector<Token> &tokens);
+
+  // Assignation
+  void execute_arrow_allocation(const std::vector<Token> &tokens);
+  void execute_simple_allocation(const std::vector<Token> &tokens);
+
+  // Control
+  bool evaluate_condition(const std::vector<Token> &tokens);
+  size_t execute_control_loop(const StrideProgram &program, size_t index);
+  size_t execute_control_if(const StrideProgram &program, size_t index);
+
+  // I2C
+  void executeI2C(const std::vector<Token> &tokens);
+  void executeI2CInit(const std::vector<Token> &tokens);
+  void executeI2CWrite(const std::vector<Token> &tokens);
+  void executeI2CRead(const std::vector<Token> &tokens);
+
+  // Variables
+  StrideVariable<int> _variables;
+  StrideVariable<StrideLed *> _leds;
+  StrideVariable<StrideBuzzer *> _buzzers;
+  StrideVariable<StrideButton *> _buttons;
+  std::atomic<bool> endless_loop{true};
+};

@@ -1,6 +1,11 @@
 README.md
+cmake-build-debug/
 sdkconfig.old
 sdkconfig
 .gitginore
 build/*
-main/build/*
+README.md
+core/build/*
+core/external/*
+core/src/handler/
+core/tests/

@@ -22,7 +22,7 @@ El dispositivo STRIDE implementa un sistema de gestión de red dual, diferencian
 
 #### Configuración de Desarrollo
 
-Para facilitar las pruebas durante el desarrollo del firmware, se utiliza un archivo `config.json` embebido en el binario. Este define las credenciales por defecto:
+The project **hello_world** contains one source file in C language [hello_world_main.c](src/hello_world_main.c). The file is located in folder [main](src).
 
 ```json
 {
