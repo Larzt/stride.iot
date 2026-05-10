@@ -83,102 +83,143 @@
 //         vTaskDelay(pdMS_TO_TICKS(1000));
 //     }
 // }
-
 #include <stdio.h>
 #include <stdint.h>
+#include <math.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/i2c.h"
+
+#include "driver/i2c_master.h"
 #include "esp_log.h"
 
-#define I2C_MASTER_SCL_IO 22
-#define I2C_MASTER_SDA_IO 21
-#define I2C_MASTER_NUM I2C_NUM_0
-#define I2C_MASTER_FREQ_HZ 100000
+#define SDA GPIO_NUM_21
+#define SCL GPIO_NUM_22
+#define I2C_PORT I2C_NUM_0
+#define MPU_ADDR 0x68
 
-#define MPU6050_ADDR 0x68
-#define MPU6050_PWR_MGMT_1 0x6B
-#define MPU6050_ACCEL_XOUT_H 0x3B
+#define ACCEL_XOUT 0x3B
+#define PWR_MGMT_1 0x6B
 
-static const char *TAG = "MPU6050";
+static const char *TAG = "IMU";
 
-esp_err_t i2c_master_init(void)
+static i2c_master_bus_handle_t bus;
+static i2c_master_dev_handle_t dev;
+
+// Estado orientación
+float roll = 0;
+float pitch = 0;
+float yaw = 0;
+
+// bias gyro (calibración simple)
+float gx_off = 0, gy_off = 0, gz_off = 0;
+
+void i2c_init()
 {
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_MASTER_SDA_IO,
-        .scl_io_num = I2C_MASTER_SCL_IO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = I2C_MASTER_FREQ_HZ,
-    };
+    i2c_master_bus_config_t bus_cfg = {};
+    bus_cfg.i2c_port = I2C_PORT;
+    bus_cfg.sda_io_num = SDA;
+    bus_cfg.scl_io_num = SCL;
+    bus_cfg.clk_source = I2C_CLK_SRC_DEFAULT;
+    bus_cfg.glitch_ignore_cnt = 7;
 
-    i2c_param_config(I2C_MASTER_NUM, &conf);
+    i2c_new_master_bus(&bus_cfg, &bus);
 
-    return i2c_driver_install(
-        I2C_MASTER_NUM,
-        conf.mode,
-        0,
-        0,
-        0);
+    i2c_device_config_t dev_cfg = {};
+    dev_cfg.device_address = MPU_ADDR;
+    dev_cfg.dev_addr_length = I2C_ADDR_BIT_LEN_7;
+    dev_cfg.scl_speed_hz = 100000;
+
+    i2c_master_bus_add_device(bus, &dev_cfg, &dev);
 }
 
-esp_err_t mpu6050_write_byte(uint8_t reg, uint8_t data)
+void mpu_write(uint8_t reg, uint8_t val)
 {
-    uint8_t write_buf[2] = {reg, data};
-
-    return i2c_master_write_to_device(
-        I2C_MASTER_NUM,
-        MPU6050_ADDR,
-        write_buf,
-        sizeof(write_buf),
-        pdMS_TO_TICKS(1000));
+    uint8_t buf[2] = {reg, val};
+    i2c_master_transmit(dev, buf, 2, -1);
 }
 
-esp_err_t mpu6050_read(uint8_t reg, uint8_t *data, size_t len)
+void mpu_read(uint8_t reg, uint8_t *buf, size_t len)
 {
-    return i2c_master_write_read_device(
-        I2C_MASTER_NUM,
-        MPU6050_ADDR,
-        &reg,
-        1,
-        data,
-        len,
-        pdMS_TO_TICKS(1000));
+    i2c_master_transmit_receive(dev, &reg, 1, buf, len, -1);
 }
 
-void mpu6050_init(void)
+// calibración rápida
+void calibrate()
 {
-    // Despertar MPU6050
-    mpu6050_write_byte(MPU6050_PWR_MGMT_1, 0x00);
+    uint8_t d[14];
+
+    for (int i = 0; i < 300; i++) {
+        mpu_read(ACCEL_XOUT, d, 14);
+
+        int16_t gx = (d[8] << 8) | d[9];
+        int16_t gy = (d[10] << 8) | d[11];
+        int16_t gz = (d[12] << 8) | d[13];
+
+        gx_off += gx;
+        gy_off += gy;
+        gz_off += gz;
+
+        vTaskDelay(pdMS_TO_TICKS(5));
+    }
+
+    gx_off /= 300;
+    gy_off /= 300;
+    gz_off /= 300;
 }
 
-void app_main(void)
+extern "C" void app_main()
 {
-    ESP_ERROR_CHECK(i2c_master_init());
+    i2c_init();
 
-    mpu6050_init();
+    mpu_write(PWR_MGMT_1, 0x00);
 
-    uint8_t data[14];
+    calibrate();
 
-    while (1)
-    {
-        if (mpu6050_read(MPU6050_ACCEL_XOUT_H, data, 14) == ESP_OK)
-        {
-            int16_t accel_x = (data[0] << 8) | data[1];
-            int16_t accel_y = (data[2] << 8) | data[3];
-            int16_t accel_z = (data[4] << 8) | data[5];
+    uint8_t d[14];
 
-            int16_t gyro_x = (data[8] << 8) | data[9];
-            int16_t gyro_y = (data[10] << 8) | data[11];
-            int16_t gyro_z = (data[12] << 8) | data[13];
+    const float dt = 0.01;   // 100 Hz
+    const float alpha = 0.98;
 
-            ESP_LOGI(TAG,
-                     "ACCEL X:%d Y:%d Z:%d | GYRO X:%d Y:%d Z:%d",
-                     accel_x, accel_y, accel_z,
-                     gyro_x, gyro_y, gyro_z);
-        }
+    while (1) {
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        mpu_read(ACCEL_XOUT, d, 14);
+
+        // acelerómetro
+        int16_t ax = (d[0] << 8) | d[1];
+        int16_t ay = (d[2] << 8) | d[3];
+        int16_t az = (d[4] << 8) | d[5];
+
+        // gyro
+        int16_t gx = (d[8] << 8) | d[9];
+        int16_t gy = (d[10] << 8) | d[11];
+        int16_t gz = (d[12] << 8) | d[13];
+
+        float axg = ax / 16384.0f;
+        float ayg = ay / 16384.0f;
+        float azg = az / 16384.0f;
+
+        float gxd = (gx - gx_off) / 131.0f;
+        float gyd = (gy - gy_off) / 131.0f;
+        float gzd = (gz - gz_off) / 131.0f;
+
+        // roll/pitch desde acelerómetro
+        float roll_acc  = atan2(ayg, azg) * 57.2958f;
+        float pitch_acc = atan2(-axg, sqrt(ayg*ayg + azg*azg)) * 57.2958f;
+
+        // integración gyro
+        roll  += gxd * dt;
+        pitch += gyd * dt;
+        yaw   += gzd * dt;
+
+        // filtro complementario
+        roll  = alpha * roll  + (1 - alpha) * roll_acc;
+        pitch = alpha * pitch + (1 - alpha) * pitch_acc;
+
+        ESP_LOGI(TAG,
+            "ROLL: %.2f PITCH: %.2f YAW: %.2f",
+            roll, pitch, yaw);
+
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
