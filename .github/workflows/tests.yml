@@ -2,39 +2,29 @@ name: Lexer Tests
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "main", "master" ]
-
-env:
-  TERM: xterm-256color
+    branches: [ "main" ]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: ./core/tests/
+
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    - name: Checkout del repositorio
+      uses: actions/checkout@v4
 
-      - name: Install compiler
-        run: |
-          sudo apt update
-          sudo apt install -y g++
+    - name: Instalar dependencias
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential g++
 
-      - name: Build tests
-        run: |
-          g++ -std=c++17 \
-            main/tests/lexer_test.cc \
-            main/language/lexer/lexer.cc \
-            main/language/lexer/line_lexer.cc \
-            -Imain/language/lexer \
-            -Imain/language \
-            -Imain/utils \
-            -Imain/consts \
-            -DTEST \
-            -o lexer_test
+    - name: Compilar con Makefile
+      run: make
 
-      - name: Run tests
-        run: |
-          ./lexer_test || exit 1
+    - name: Ejecutar Tests
+      run: ./run_tests
