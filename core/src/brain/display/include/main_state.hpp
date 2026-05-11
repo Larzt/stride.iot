@@ -28,7 +28,7 @@ public:
         {
           continue;
         }
-        _files.emplace_back(name);
+        _apps.emplace_back(name);
       }
       closedir(dir);
     }
@@ -55,18 +55,18 @@ public:
 
     _cursor_subscription = _cursor_position.subscribe([this](int)
                                                       {
-      if (_files.empty())
+      if (_apps.empty())
       {
         return;
       }
 
       int idx = _cursor_position.get();
-      if (idx < 0 || idx >= (int)_files.size())
+      if (idx < 0 || idx >= (int)_apps.size())
       {
         return;
       }
 
-      Blackboard::CurrentLoadProgramFile.set(_files[idx]); });
+      Blackboard::CurrentLoadProgramFile.set(_apps[idx]); });
   }
 
   void on_exit(Display &ctx) override
@@ -94,7 +94,7 @@ public:
     int y = 51;
     int lineHeight = 10;
 
-    for (size_t i = 0; i < _files.size(); i++)
+    for (size_t i = 0; i < _apps.size(); i++)
     {
       if (i == (size_t)_cursor_position.get())
       {
@@ -105,7 +105,7 @@ public:
         tft.setTextColor(TFT_BLACK, TFT_YELLOW);
       }
 
-      tft.drawString(_files[i].c_str(), 10, y);
+      tft.drawString(_apps[i].c_str(), 10, y);
       y += lineHeight;
 
       if (y > tft.height() - 20)
@@ -115,7 +115,7 @@ public:
 
   void move_cursor_position(int delta)
   {
-    if (_files.empty())
+    if (_apps.empty())
     {
       return;
     }
@@ -124,10 +124,10 @@ public:
 
     if (_cursor_position.get() < 0)
     {
-      _cursor_position.set(_files.size() - 1);
+      _cursor_position.set(_apps.size() - 1);
     }
 
-    if (_cursor_position.get() >= (int)_files.size())
+    if (_cursor_position.get() >= (int)_apps.size())
     {
       _cursor_position.set(0);
     }
@@ -136,7 +136,7 @@ public:
   StateType get_type() const override { return StateType::Main; }
 
 private:
-  std::vector<std::string> _files;
+  std::vector<std::string> _apps;
   StrideObservable<int> _cursor_position{0};
   StrideSubscription _cursor_subscription;
 };

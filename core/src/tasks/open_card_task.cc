@@ -40,12 +40,11 @@ void open_card_task(void *pvParameters)
   slot_config.gpio_cs = GPIO_NUM_5;
   slot_config.host_id = SPI2_HOST;
 
-  esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-      .format_if_mount_failed = false,
-      .max_files = 5,
-      .allocation_unit_size = 16 * 1024,
-      .disk_status_check_enable = true,
-  };
+  esp_vfs_fat_mount_config_t mount_config{};
+  mount_config.format_if_mount_failed = false;
+  mount_config.max_files = 5;
+  mount_config.allocation_unit_size = 16 * 1024;
+  mount_config.use_one_fat = false;
 
   sdmmc_card_t *card;
 

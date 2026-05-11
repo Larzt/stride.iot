@@ -11,6 +11,8 @@ enum StrideSubsystem
   Card,
   Interpreter,
   Screen,
+  Expander,
+  IMU,
 };
 
 class StrideLogger
@@ -53,6 +55,14 @@ private:
       return "STRIDE_SERVER";
     case StrideSubsystem::Card:
       return "STRIDE_SDCARD";
+    case StrideSubsystem::Interpreter:
+      return "STRIDE_INTERPRETER";
+    case StrideSubsystem::Screen:
+      return "STRIDE_SCREEN";
+    case StrideSubsystem::Expander
+      return "STRIDE_EXPANDER";
+    case StrideSubsystem::IMU:
+      return "STRIDE_IMU";
     default:
       return "STRIDE";
     }

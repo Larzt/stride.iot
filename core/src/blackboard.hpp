@@ -44,8 +44,13 @@ struct Blackboard
   // Handlers
   static inline gpio_num_t PingLed = GPIO_NUM_25;
 
+  // IMU
+  static inline float ImuRoll = 0;
+  static inline float ImuPitch = 0;
+  static inline float ImuYaw = 0;
+
   // Display
-  static inline uint32_t LoadingTimeMs = 3000;
+  static inline uint32_t LoadingTimeMs = 2000;
 
   // Defaults
   static void Reset()

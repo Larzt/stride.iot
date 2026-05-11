@@ -15,3 +15,11 @@ struct InputEvent
   InputType type;
   int delta;
 };
+
+struct AppDescriptor
+{
+  std::string name;
+  AppType type;
+  std::function<void()> launch;
+  std::string file;
+};

@@ -16,6 +16,7 @@ enum class StateType {
   Startup,
   Main,
   View,
+  ImuMonitor,
 };
 
 enum class InputType
@@ -23,4 +24,9 @@ enum class InputType
   Button,
   Encoder,
   Touch
+};
+
+enum class AppType {
+  Builtin,
+  Script,
 };
