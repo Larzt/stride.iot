@@ -59,7 +59,7 @@ private:
       return "STRIDE_INTERPRETER";
     case StrideSubsystem::Screen:
       return "STRIDE_SCREEN";
-    case StrideSubsystem::Expander
+    case StrideSubsystem::Expander:
       return "STRIDE_EXPANDER";
     case StrideSubsystem::IMU:
       return "STRIDE_IMU";

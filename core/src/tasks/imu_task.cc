@@ -16,21 +16,15 @@ static i2c_master_dev_handle_t imu_dev;
 
 esp_err_t imu_init(void)
 {
-  i2c_device_config_t imu_conf = {};
-  imu_conf.dev_addr_length = I2C_ADDR_BIT_LEN_7;
-  imu_conf.device_address = MPU_ADDR;
-  imu_conf.scl_speed_hz = 400000;
+  i2c_device_config_t cfg = {};
+  cfg.dev_addr_length = I2C_ADDR_BIT_LEN_7;
+  cfg.device_address = MPU_ADDR;
+  cfg.scl_speed_hz = 400000;
 
-  esp_err_t err = i2c_master_bus_add_device(
+  return i2c_master_bus_add_device(
       i2c_get_bus(),
-      &imu_conf,
+      &cfg,
       &imu_dev);
-
-  if (err != ESP_OK)
-    return err;
-
-  uint8_t wake[2] = {PWR_MGMT_1, 0x00};
-  return i2c_master_transmit(imu_dev, wake, 2, -1);
 }
 
 void imu_task(void *pvParameters)

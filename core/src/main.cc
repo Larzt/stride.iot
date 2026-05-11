@@ -12,6 +12,7 @@
 extern "C" void app_main(void)
 {
     ESP_ERROR_CHECK(i2c_master_init());
+    vTaskDelay(pdMS_TO_TICKS(100));
     ESP_ERROR_CHECK(imu_init());
     ESP_ERROR_CHECK(expander_init());
 
@@ -82,13 +83,13 @@ extern "C" void app_main(void)
         1);
 
     xTaskCreatePinnedToCore(
-        expander_task,
-        "Expand",
-        4096,
-        NULL,
-        5,
-        NULL,
-        0);
+    expander_task,
+    "Expand",
+    4096,
+    NULL,
+    5,
+    NULL,
+    0);
 
     while (true)
     {
