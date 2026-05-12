@@ -9,4 +9,10 @@
 #include "esp_err.h"
 
 esp_err_t imu_init(void);
+
+void imu_enable();
+void imu_disable();
+
 void imu_task(void *pvParameters);
+
+extern TaskHandle_t g_imu_task_handle;

@@ -4,7 +4,7 @@ void Interpreter::execute(const StrideProgram &program)
 {
   if (program.empty())
   {
-    StrideLogger::Log(StrideSubsystem::Interpreter, "File %s is empty", Blackboard::CurrentLoadProgramFile.get());
+    StrideLogger::Log(StrideSubsystem::Interpreter, "File %s is empty", Blackboard::CurrentProgram.get());
     return;
   }
 
@@ -377,7 +377,8 @@ void Interpreter::execute_print_command(const std::vector<Token> &tokens)
     }
   }
 
-  std::string timestamp_msg = "[HORA]: " + message + "\n";
+  std::string timestamp = TimeUtils::get_timestamp();
+  std::string timestamp_msg = "[" + timestamp + "]: " + message + "\n";
   std::string path = Blackboard::MountPoint + Blackboard::CurrentLogFile;
   sink_file(path, timestamp_msg);
 }

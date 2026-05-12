@@ -1,6 +1,7 @@
 #pragma once
 
 #include "display.hpp"
+#include "main_state.hpp"
 #include "blackboard.hpp"
 #include "enums.hpp"
 
@@ -35,8 +36,10 @@ public:
 
   void on_input(const InputEvent &event) override
   {
-    if (event.type != InputType::Button)
-      return;
+    if (event.type == InputType::Button && event.delta == 0)
+    {
+      Display::Instance().transition_to(std::make_unique<MainState>());
+    }
 
     _scroll += event.delta;
 

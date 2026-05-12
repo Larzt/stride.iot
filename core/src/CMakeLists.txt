@@ -10,6 +10,8 @@ idf_component_register(
   "types"
   "tasks"
   "utils"
+  "utils/timer"
+  "utils/app"
   "utils/parse"
   "utils/sink"
   "utils/hexer"
@@ -21,11 +23,12 @@ idf_component_register(
   "brain/interpreter"
   "brain/network"
   "brain/server"
+  "brain/bus"
   "brain/display"
   "brain/display/include"
 
-  REQUIRES logger io observer lexer
-  REQUIRES esp_wifi esp_netif esp_event nvs_flash esp_http_server
+  REQUIRES logger io observer lexer locator
+  REQUIRES esp_wifi esp_netif esp_event nvs_flash esp_http_server lwip
 
   PRIV_REQUIRES esp_driver_gpio driver fatfs sdmmc spi_flash LovyanGFX
 )

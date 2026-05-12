@@ -10,6 +10,7 @@ class StrideObservable
 public:
   using Callback = std::function<void(const T &)>;
 
+  StrideObservable() : _value{} {}
   explicit StrideObservable(T initial_value) : _value(initial_value) {}
 
   StrideSubscription subscribe(Callback callback)

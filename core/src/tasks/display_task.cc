@@ -7,7 +7,6 @@ void display_task(void *pvParameters)
   StrideButton right_button(Blackboard::RightButton);
   StrideButton enter_button(Blackboard::EnterButton);
 
-  Display::Instance().begin();
   Display::Instance().transition_to(std::make_unique<StartupState>());
 
   while (true)
@@ -20,13 +19,22 @@ void display_task(void *pvParameters)
 
     if (left_button.just_pressed())
     {
+      StrideLogger::Log(StrideSubsystem::Screen, "Pressed left button");
       event.delta = -1;
       state->on_input(event);
     }
 
     if (right_button.just_pressed())
     {
+      StrideLogger::Log(StrideSubsystem::Screen, "Pressed right button");
       event.delta = 1;
+      state->on_input(event);
+    }
+
+    if (enter_button.just_pressed())
+    {
+      event.delta = 0;
+      StrideLogger::Log(StrideSubsystem::Screen, "Pressed enter button");
       state->on_input(event);
     }
 

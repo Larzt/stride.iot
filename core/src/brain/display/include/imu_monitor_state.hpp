@@ -1,6 +1,7 @@
 #pragma once
 #include "display.hpp"
 #include "main_state.hpp"
+#include "imu_task.hpp"
 
 class ImuMonitorState : public DisplayBaseState
 {
@@ -9,6 +10,8 @@ public:
   {
     auto &tft = ctx.getTFT();
     tft.fillScreen(TFT_BLACK);
+
+    imu_enable();
   }
 
   void on_update(Display &ctx) override
@@ -26,10 +29,15 @@ public:
 
   void on_input(const InputEvent &event) override
   {
-    if (event.type == InputType::ButtonLongPress)
+    if (event.type == InputType::Button)
     {
-      Display::transition_to(std::make_unique<MainState>());
+      Display::Instance().transition_to(std::make_unique<MainState>());
     }
+  }
+
+  void on_exit(Display &ctx) override
+  {
+    imu_disable();
   }
 
   StateType get_type() const override

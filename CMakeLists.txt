@@ -9,5 +9,7 @@ set(EXTRA_COMPONENT_DIRS
     core/plugin
 )
 
+add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-frtti>")
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(iot-stride)

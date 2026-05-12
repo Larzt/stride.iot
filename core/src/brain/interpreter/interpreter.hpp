@@ -17,6 +17,7 @@
 #include "stride_button.hpp"
 #include "stride_buzzer.hpp"
 #include "stride_logger.hpp"
+#include "timer.hpp"
 
 class Interpreter
 {

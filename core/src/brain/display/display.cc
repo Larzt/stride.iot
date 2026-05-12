@@ -5,7 +5,7 @@ LGFX_Config::LGFX_Config()
 {
   {
     auto cfg = _bus_instance.config();
-    cfg.spi_host = SPI3_HOST;
+    cfg.spi_host = TFT_HOST;
     cfg.spi_mode = 0;
     cfg.freq_write = 10000000;
     cfg.pin_sclk = TFT_CLK;
@@ -37,22 +37,14 @@ void Display::begin()
 void Display::transition_to(std::unique_ptr<DisplayBaseState> new_state)
 {
   if (_current_state)
-  {
     _current_state->on_exit(*this);
-  }
-
   _current_state = std::move(new_state);
-
   if (_current_state)
-  {
     _current_state->on_enter(*this);
-  }
 }
 
 void Display::update()
 {
   if (_current_state)
-  {
     _current_state->on_update(*this);
-  }
 }

@@ -4,6 +4,7 @@
 
 #include "interpreter.hpp"
 #include "types.hpp"
+#include "app.hpp"
 
 #include <vector>
 
@@ -19,8 +20,12 @@ void read_card_task(void *pvParameters)
 
     interpreter.stop_endless_loop();
 
+    AppDescriptor app = Blackboard::CurrentProgram.get();
+    if (app.name.empty()) {
+      continue;
+    }
 
-    std::string current_program = Blackboard::MountPoint + Blackboard::CurrentLoadProgramFile.get();
+    std::string current_program = Blackboard::MountPoint + app.path;
     FILE *f = fopen(current_program.c_str(), "r");
     if (!f)
     {
@@ -37,7 +42,8 @@ void read_card_task(void *pvParameters)
       std::string s_line(line);
       s_line.erase(s_line.find_last_not_of("\n\r\t ") + 1);
 
-      if (s_line.empty()) continue;
+      if (s_line.empty())
+        continue;
 
       auto tokens = tokenize(s_line);
       if (!tokens.empty())

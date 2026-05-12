@@ -3,5 +3,6 @@
 #include "freertos/task.h"
 #include "stride_button.hpp"
 #include "types.hpp"
+#include "stride_logger.hpp"
 
 void display_task(void *pvParameters);

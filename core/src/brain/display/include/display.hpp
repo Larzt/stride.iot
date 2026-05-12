@@ -6,15 +6,10 @@
 
 #include "blackboard.hpp"
 #include "types.hpp"
+#include "bus.hpp"
 
 #define LGFX_USE_V1
 #include <LovyanGFX.hpp>
-
-#define TFT_RST 4
-#define TFT_RS 2
-#define TFT_CS 15
-#define TFT_SDI 13
-#define TFT_CLK 14
 
 enum TFT_DIRECTION
 {
@@ -42,7 +37,7 @@ public:
   virtual void on_update(Display &ctx) = 0;
   virtual void on_exit(Display &ctx) = 0;
   virtual StateType get_type() const = 0;
-  virtual void on_input(const InputEvent& event) {}
+  virtual void on_input(const InputEvent &event) {}
 };
 
 class Display
@@ -59,7 +54,7 @@ public:
   void update();
 
   LGFX_Config &getTFT() { return _tft; }
-  DisplayBaseState *get_current_state() {return _current_state.get(); }
+  DisplayBaseState *get_current_state() { return _current_state.get(); }
 
 private:
   Display() = default;

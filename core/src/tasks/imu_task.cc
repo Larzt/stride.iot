@@ -14,6 +14,8 @@ static const float RAD_TO_DEG = 57.2958f;
 
 static i2c_master_dev_handle_t imu_dev;
 
+TaskHandle_t g_imu_task_handle = nullptr;
+
 esp_err_t imu_init(void)
 {
   i2c_device_config_t cfg = {};
@@ -29,6 +31,7 @@ esp_err_t imu_init(void)
 
 void imu_task(void *pvParameters)
 {
+  StrideLogger::Log(StrideSubsystem::IMU, "IMU Task");
   float roll = 0, pitch = 0, yaw = 0;
   float gx_off = 0, gy_off = 0, gz_off = 0;
 
@@ -84,12 +87,48 @@ void imu_task(void *pvParameters)
       roll = alpha * roll + (1.0f - alpha) * roll_acc;
       pitch = alpha * pitch + (1.0f - alpha) * pitch_acc;
 
-      // Blackboard::ImuRoll = roll;
-      // Blackboard::ImuPitch = pitch;
-      // Blackboard::ImuYaw = yaw;
+      Blackboard::ImuRoll = roll;
+      Blackboard::ImuPitch = pitch;
+      Blackboard::ImuYaw = yaw;
       StrideLogger::Log(StrideSubsystem::IMU, "R: %.2f | P: %.2f | Y: %.2f", roll, pitch, yaw);
     }
 
     vTaskDelay(pdMS_TO_TICKS(10));
   }
+}
+
+void imu_enable()
+{
+  uint8_t wake_cmd[2] = {PWR_MGMT_1, 0x00};
+
+  i2c_master_transmit(
+      imu_dev,
+      wake_cmd,
+      sizeof(wake_cmd),
+      -1);
+
+  if (g_imu_task_handle)
+  {
+    vTaskResume(g_imu_task_handle);
+  }
+
+  StrideLogger::Log(StrideSubsystem::IMU, "IMU ENABLED");
+}
+
+void imu_disable()
+{
+  uint8_t sleep_cmd[2] = {PWR_MGMT_1, 0x40};
+
+  i2c_master_transmit(
+      imu_dev,
+      sleep_cmd,
+      sizeof(sleep_cmd),
+      -1);
+
+  if (g_imu_task_handle)
+  {
+    vTaskSuspend(g_imu_task_handle);
+  }
+
+  StrideLogger::Log(StrideSubsystem::IMU, "IMU DISABLED");
 }

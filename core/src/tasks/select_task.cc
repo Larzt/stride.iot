@@ -2,6 +2,7 @@
 #include "display.hpp"
 #include "startup_state.hpp"
 #include "view_state.hpp"
+#include "imu_monitor_state.hpp"
 
 bool is_executable_program(const std::string &file)
 {
@@ -21,11 +22,26 @@ void hear_program_selected_file_button_task(void *pvParameters)
   {
     if (button.wait_for_long_press(Blackboard::ReloadTimePressed))
     {
-      std::string file = Blackboard::CurrentLoadProgramFile.get();
-
-      if (!is_executable_program(file))
+      AppDescriptor app = Blackboard::CurrentProgram.get();
+      std::string file = app.path;
+      if (app.type == AppType::Script)
       {
-        Display::Instance().transition_to(std::make_unique<ViewState>(file));
+        if (!is_executable_program(file))
+        {
+          Display::Instance().transition_to(std::make_unique<ViewState>(file));
+          vTaskDelay(pdMS_TO_TICKS(10));
+          continue;
+        }
+      }
+      else if (app.type == AppType::Builtin)
+      {
+        Display::Instance().transition_to(std::make_unique<ImuMonitorState>());
+        vTaskDelay(pdMS_TO_TICKS(10));
+        continue;
+      }
+      else
+      {
+        StrideLogger::Error(StrideSubsystem::Interpreter, "Loading selected program: %s has unknown type.", file.c_str());
         vTaskDelay(pdMS_TO_TICKS(10));
         continue;
       }
@@ -41,7 +57,7 @@ void hear_program_selected_file_button_task(void *pvParameters)
 
       while (button.is_pressed())
       {
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(100));
       }
     }
 

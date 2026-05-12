@@ -7,6 +7,7 @@
 #include "view.hpp"
 #include "save.hpp"
 #include "librarie.hpp"
+#include "wifi.hpp"
 
 Server::Server() {}
 
@@ -79,13 +80,13 @@ void Server::load_handlers()
   this->add_handler(new View());
   this->add_handler(new Save());
   this->add_handler(new Librarie());
+  this->add_handler(new Ping());
   if (Blackboard::CurrentServerMode.get() == ServerMode::Developer)
   {
-    // The first time you turn on the device, it will be in developer mode; once you've set up the Wi-Fi, switch to user mode so that this handler cannot be accessed.
-    // this->add_handler(new WifiConfigHandler());
-
-    this->add_handler(new Ping());
-
+    // The first time you turn on the device,
+    // it will be in developer mode; once you've set up the Wi-Fi,
+    // switch to user mode so that this handler cannot be accessed.
+    this->add_handler(new Wifi());
     // this->add_handler(new StatusHandler());
     // this->add_handler(new ConfigHandler());
   }

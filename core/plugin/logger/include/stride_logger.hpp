@@ -13,6 +13,7 @@ enum StrideSubsystem
   Screen,
   Expander,
   IMU,
+  Utils,
 };
 
 class StrideLogger

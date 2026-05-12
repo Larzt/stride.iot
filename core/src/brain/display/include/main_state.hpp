@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "enums.hpp"
+#include "app.hpp"
 #include "stride_logger.hpp"
 #include "stride_observer.hpp"
 #include "stride_subscription.hpp"
@@ -15,6 +16,13 @@ class MainState : public DisplayBaseState
 public:
   void on_enter(Display &ctx) override
   {
+    AppDescriptor app;
+
+    app.name = "IMU Monitor";
+    app.path = "";
+    app.type = AppType::Builtin;
+    _apps.push_back(app);
+
     // Read card files
     DIR *dir = opendir(Blackboard::MountPoint.c_str());
     if (dir)
@@ -28,7 +36,10 @@ public:
         {
           continue;
         }
-        _apps.emplace_back(name);
+        app.name = name;
+        app.path = name;
+        app.type = AppType::Script;
+        _apps.push_back(app);
       }
       closedir(dir);
     }
@@ -48,30 +59,33 @@ public:
     tft.setTextColor(TFT_YELLOW);
     tft.setTextSize(2);
     // tft.drawWedgeLine(0, height-30, width, height-30, 1.5, 1.5, TFT_WHITE);
-    tft.drawCenterString(Blackboard::LocalIpAddress.c_str(), width / 2, height - 20);
+    tft.drawCenterString(Blackboard::LocalIpAddress.get().c_str(), width / 2, height - 20);
 
     _cursor_subscription = _cursor_position.subscribe([this, &ctx](int)
-                                                      { draw_files(ctx); });
-
-    _cursor_subscription = _cursor_position.subscribe([this](int)
                                                       {
-      if (_apps.empty())
-      {
-        return;
-      }
+        draw_files(ctx);
 
-      int idx = _cursor_position.get();
-      if (idx < 0 || idx >= (int)_apps.size())
-      {
-        return;
-      }
+        if (_apps.empty()) return;
+        int idx = _cursor_position.get();
+        if (idx < 0 || idx >= (int)_apps.size()) return;
+        Blackboard::CurrentProgram = _apps[idx]; });
 
-      Blackboard::CurrentLoadProgramFile.set(_apps[idx]); });
+    _ip_subscription = Blackboard::LocalIpAddress.subscribe([this, &ctx](const std::string &ip)
+                                                            {
+        auto &tft = ctx.getTFT();
+        int32_t width  = tft.width();
+        int32_t height = tft.height();
+
+        tft.fillRect(0, height - 30, width, 30, TFT_BLACK);
+        tft.setTextColor(TFT_YELLOW);
+        tft.setTextSize(2);
+        tft.drawCenterString(ip.c_str(), width / 2, height - 20); });
   }
 
   void on_exit(Display &ctx) override
   {
     _cursor_subscription.unsubscribe();
+    _ip_subscription.unsubscribe();
   }
 
   void on_update(Display &ctx) override {}
@@ -105,7 +119,7 @@ public:
         tft.setTextColor(TFT_BLACK, TFT_YELLOW);
       }
 
-      tft.drawString(_apps[i].c_str(), 10, y);
+      tft.drawString(_apps[i].name.c_str(), 10, y);
       y += lineHeight;
 
       if (y > tft.height() - 20)
@@ -136,7 +150,8 @@ public:
   StateType get_type() const override { return StateType::Main; }
 
 private:
-  std::vector<std::string> _apps;
+  std::vector<AppDescriptor> _apps;
   StrideObservable<int> _cursor_position{0};
   StrideSubscription _cursor_subscription;
+  StrideSubscription _ip_subscription;
 };
