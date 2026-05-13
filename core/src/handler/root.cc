@@ -71,6 +71,18 @@ esp_err_t Root::handler(httpd_req_t *req)
     }
 
     /* CONTENT */
+    button {
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 18px;
+        padding: 6px;
+    }
+
+    button:hover {
+        transform: scale(1.2);
+    }
+
     .content {
         flex: 1;
         background: var(--bg);
@@ -224,6 +236,20 @@ esp_err_t Root::handler(httpd_req_t *req)
         })
         .then(() => loadPage('/browser'))
         .catch(() => alert("Error creando archivo"));
+    }
+
+    function deleteFile(file) {
+        if (!confirm("¿Eliminar " + file + "?")) return;
+
+        fetch('/delete?file=' + encodeURIComponent(file), {
+            method: 'POST'
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Error");
+            return res.text();
+        })
+        .then(() => loadPage('/browser'))
+        .catch(() => alert("Error eliminando archivo"));
     }
     </script>
 

@@ -199,7 +199,7 @@ void Network::event_handler(void *arg, esp_event_base_t event_base, int32_t even
 
     TimeUtils::initialize();
 
-    StrideLogger::Log(StrideSubsystem::Network, "WiFi IP: %s", Blackboard::WifiIpAddress.c_str());
+    StrideLogger::Log(StrideSubsystem::Network, "WiFi IP: %s", Blackboard::WifiIpAddress.get().c_str());
 
     Blackboard::CurrentNetworkMode = NetworkMode::Station;
 

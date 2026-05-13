@@ -17,7 +17,7 @@ struct Blackboard
   static inline int MaxNetConnections = 4;
 
   static inline bool IsNetConnected = false;
-  static inline std::string WifiIpAddress = "0.0.0.0";
+  static inline StrideObservable<std::string> WifiIpAddress{"0.0.0.0"};
   static inline StrideObservable<std::string> LocalIpAddress{"0.0.0.0"};
   static inline int MaxConnectionRetries = 5;
   static inline StrideObservable<NetworkMode> CurrentNetworkMode{NetworkMode::Access};

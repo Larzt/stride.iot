@@ -74,8 +74,9 @@ esp_err_t Browser::handler(httpd_req_t *req)
     html += "<tr>";
     html += "<td>📄 " + fileName + "</td>";
     html += "<td>";
-    html += "<button onclick=\"editFile('" + fileName + "')\">Editar</button>";
-    html += "<button onclick=\"viewFile('" + fileName + "')\">Ver</button>";
+    html += "<button title='Editar' onclick=\"editFile('" + fileName + "')\">✏️</button>";
+    html += "<button title='Ver' onclick=\"viewFile('" + fileName + "')\">👁</button>";
+    html += "<button title='Eliminar' onclick=\"deleteFile('" + fileName + "')\">🗑</button>";
     html += "</td>";
     html += "</tr>";
   }
