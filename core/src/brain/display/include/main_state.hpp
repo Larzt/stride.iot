@@ -66,6 +66,16 @@ public:
     _ip_subscription = Blackboard::LocalIpAddress.subscribe(ip_callback);
     _wifi_subscription = Blackboard::WifiIpAddress.subscribe(ip_callback);
 
+    _mode_subscription = Blackboard::CurrentNetworkMode.subscribe([this, &ctx](NetworkMode mode)
+                                                                  {
+        std::string active_ip = get_active_ip();
+        if (!active_ip.empty()) {
+            draw_ip_footer(ctx, active_ip);
+        } else {
+            auto &tft = ctx.getTFT();
+            tft.fillRect(0, tft.height() - 25, tft.width(), 25, TFT_BLACK);
+        } });
+
     _cursor_subscription = _cursor_position.subscribe([this, &ctx](int)
                                                       {
         draw_files(ctx);
@@ -86,6 +96,7 @@ public:
     _cursor_subscription.unsubscribe();
     _ip_subscription.unsubscribe();
     _wifi_subscription.unsubscribe();
+    _mode_subscription.unsubscribe();
   }
 
   void on_update(Display &ctx) override
@@ -152,13 +163,19 @@ private:
   void move_cursor_position(int delta)
   {
     if (_apps.empty())
+    {
       return;
+    }
 
     int new_pos = _cursor_position.get() + delta;
     if (new_pos < 0)
+    {
       new_pos = _apps.size() - 1;
+    }
     if (new_pos >= (int)_apps.size())
+    {
       new_pos = 0;
+    }
 
     _cursor_position.set(new_pos);
   }
@@ -177,13 +194,24 @@ private:
 
   std::string get_active_ip()
   {
-    std::string local = Blackboard::LocalIpAddress.get();
-    std::string wifi = Blackboard::WifiIpAddress.get();
+    NetworkMode mode = Blackboard::CurrentNetworkMode.get();
 
-    if (!wifi.empty() && wifi != "0.0.0.0")
-      return wifi;
-    if (!local.empty() && local != "0.0.0.0")
-      return local;
+    if (mode == NetworkMode::Station)
+    {
+      std::string wifi = Blackboard::WifiIpAddress.get();
+      if (!wifi.empty() && wifi != "0.0.0.0")
+      {
+        return wifi;
+      }
+    }
+    else if (mode == NetworkMode::Access)
+    {
+      std::string local = Blackboard::LocalIpAddress.get();
+      if (!local.empty() && local != "0.0.0.0")
+      {
+        return local;
+      }
+    }
 
     return "";
   }
@@ -194,4 +222,5 @@ private:
   StrideSubscription _cursor_subscription;
   StrideSubscription _ip_subscription;
   StrideSubscription _wifi_subscription;
+  StrideSubscription _mode_subscription;
 };
