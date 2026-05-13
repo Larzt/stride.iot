@@ -62,7 +62,10 @@ esp_err_t Browser::handler(httpd_req_t *req)
     if (fileName.length() < 4)
       continue;
 
-    std::string ext = fileName.substr(fileName.length() - 4);
+    if (fileName.find('.') == std::string::npos)
+      continue;
+
+    std::string ext = fileName.substr(fileName.find_last_of('.'));
     if (ext != ".log" && ext != ".LOG" && ext != ".str" && ext != ".STR")
       continue;
 

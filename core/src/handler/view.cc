@@ -23,33 +23,73 @@ esp_err_t View::handler(httpd_req_t *req)
 {
   char query[128] = {0};
   char file[64] = {0};
+  char offsetStr[16] = {0};
+
+  size_t offset = 0;
 
   if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK)
   {
     httpd_query_key_value(query, "file", file, sizeof(file));
+    httpd_query_key_value(query, "offset", offsetStr, sizeof(offsetStr));
+    offset = atoi(offsetStr);
   }
 
-  std::string path = Blackboard::MountPoint + std::string(file);
+  std::string path = Blackboard::MountPoint + "/" + std::string(file);
 
-  std::ifstream in(path);
-  std::stringstream buffer;
+  FILE *f = fopen(path.c_str(), "r");
 
-  if (in.is_open())
+  std::string content = "";
+
+  if (f)
   {
-    buffer << in.rdbuf();
-    in.close();
+    const size_t CHUNK_SIZE = 2048;
+
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+
+    if (offset < (size_t)size)
+    {
+      fseek(f, offset, SEEK_SET);
+
+      size_t toRead = CHUNK_SIZE;
+      if (offset + CHUNK_SIZE > (size_t)size)
+        toRead = size - offset;
+
+      content.resize(toRead);
+      fread(content.data(), 1, toRead, f);
+    }
+    else
+    {
+      content = "Offset fuera de rango";
+    }
+
+    fclose(f);
+  }
+  else
+  {
+    content = "File not found";
   }
 
-  std::string content = buffer.str();
+  size_t nextOffset = offset + content.size();
 
-  std::string html = R"rawliteral(
-<div class="card">
-    <h2>Vista: )rawliteral" + std::string(file) + R"rawliteral(</h2>
-    <pre>)rawliteral"
-    + content +
-R"rawliteral(</pre>
-</div>
-)rawliteral";
+  std::string html =
+      "<div class='card'>"
+      "<h2>Viewer: " +
+      std::string(file) + "</h2>"
+                          "<pre style='background:#111;color:#0f0;padding:10px;overflow:auto;'>" +
+      content +
+      "</pre>"
+      "<div style='margin-top:10px;'>"
+      "<button onclick=\"loadPage('/view?file=" +
+      std::string(file) +
+      "&offset=" + std::to_string(offset > 2048 ? offset - 2048 : 0) +
+      "')\">⬅ Prev</button> "
+      "<button onclick=\"loadPage('/view?file=" +
+      std::string(file) +
+      "&offset=" + std::to_string(nextOffset) +
+      "')\">Next ➡</button>"
+      "</div>"
+      "</div>";
 
   httpd_resp_set_type(req, "text/html");
   httpd_resp_send(req, html.c_str(), html.length());

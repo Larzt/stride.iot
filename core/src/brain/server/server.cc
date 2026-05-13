@@ -3,6 +3,7 @@
 #include "ping.hpp"
 #include "root.hpp"
 #include "browser.hpp"
+#include "create.hpp"
 #include "editor.hpp"
 #include "view.hpp"
 #include "save.hpp"
@@ -76,6 +77,7 @@ void Server::load_handlers()
 
   this->add_handler(new Root());
   this->add_handler(new Browser());
+  this->add_handler(new Create());
   this->add_handler(new Editor());
   this->add_handler(new View());
   this->add_handler(new Save());

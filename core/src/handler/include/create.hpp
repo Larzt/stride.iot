@@ -4,15 +4,15 @@
 #include "blackboard.hpp"
 #include "stride_logger.hpp"
 
-class View : public Handler
+class Create : public Handler
 {
 public:
-  View();
+  Create();
   const std::vector<httpd_uri_t *> &uris() const override;
 
 private:
   static esp_err_t handler(httpd_req_t *req);
 
-  httpd_uri_t _view_uri;
+  httpd_uri_t _create_uri;
   std::vector<httpd_uri_t *> _uris;
 };

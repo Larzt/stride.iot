@@ -210,6 +210,21 @@ esp_err_t Root::handler(httpd_req_t *req)
             alert("Error al guardar");
         });
     }
+
+    function createFile() {
+        const name = prompt("Nombre del archivo (ej: test.log)");
+        if (!name) return;
+
+        fetch('/create?file=' + encodeURIComponent(name), {
+            method: 'POST'
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Error");
+            return res.text();
+        })
+        .then(() => loadPage('/browser'))
+        .catch(() => alert("Error creando archivo"));
+    }
     </script>
 
     </body>
