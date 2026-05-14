@@ -45,7 +45,7 @@ public:
 
     auto &tft = ctx.getTFT();
     int32_t width = tft.width();
-    int32_t height = tft.height();
+    // int32_t height = tft.height();
 
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_YELLOW);

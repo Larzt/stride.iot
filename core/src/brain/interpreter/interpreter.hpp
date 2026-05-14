@@ -6,6 +6,9 @@
 #include <atomic>
 #include <sstream>
 
+#include "driver/i2c_master.h"
+#include "i2c_bus.hpp"
+
 #include "lexer.hpp"
 #include "sink.hpp"
 #include "hexer.hpp"
@@ -42,7 +45,7 @@ private:
 
   void executeLogfile(const std::vector<Token> &tokens);
   void execute_simple_block_command(const std::vector<Token> &tokens);
-  void execute_range(const StrideProgram& program, size_t start, size_t end);
+  void execute_range(const StrideProgram &program, size_t start, size_t end);
 
   // Simple commands
   void load_device_command(const std::vector<Token> &tokens);
@@ -65,6 +68,10 @@ private:
   void executeI2CInit(const std::vector<Token> &tokens);
   void executeI2CWrite(const std::vector<Token> &tokens);
   void executeI2CRead(const std::vector<Token> &tokens);
+  i2c_master_dev_handle_t i2c_get_or_create_device(uint8_t addr, uint32_t speed_hz = 100000);
+
+  std::map<uint8_t, i2c_master_dev_handle_t> _i2c_devices; // addr -> handle
+  bool _i2c_initialized = false;
 
   // Variables
   StrideVariable<int> _variables;

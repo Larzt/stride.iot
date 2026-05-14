@@ -90,14 +90,14 @@ extern "C" void app_main(void)
 
     vTaskSuspend(g_imu_task_handle);
 
-    xTaskCreatePinnedToCore(
-        expander_task,
-        "Expand",
-        4096,
-        NULL,
-        5,
-        NULL,
-        0);
+    // xTaskCreatePinnedToCore(
+    //     expander_task,
+    //     "Expand",
+    //     4096,
+    //     NULL,
+    //     5,
+    //     NULL,
+    //     0);
 
     while (true)
     {

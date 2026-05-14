@@ -132,6 +132,10 @@ void Interpreter::execute_simple_block_command(const std::vector<Token> &tokens)
     execute_print_command(tokens);
     break;
 
+  case TokenType::I2C:
+    executeI2C(tokens);
+    break;
+
   default:
     StrideLogger::Warning(StrideSubsystem::Interpreter, "Unknown command type inside block with value: %s", tokens[0].get_value());
     break;
@@ -628,124 +632,4 @@ size_t Interpreter::execute_control_if(const StrideProgram &program, size_t inde
   }
 
   return blockEnd;
-}
-
-//
-// I2C Execute command
-//
-
-void Interpreter::executeI2C(const std::vector<Token> &tokens)
-{
-  if (tokens.size() < 2)
-  {
-    ESP_LOGE("Interpreter I2C", "Incomplete I2C command");
-    return;
-  }
-
-  switch (tokens[1].type)
-  {
-  case TokenType::INIT:
-    executeI2CInit(tokens);
-    break;
-
-  case TokenType::WRITE:
-    executeI2CWrite(tokens);
-    break;
-
-  case TokenType::READ:
-    executeI2CRead(tokens);
-    break;
-
-  default:
-    ESP_LOGW("Interpreter I2C", "Unknown I2C subcommand");
-    break;
-  }
-}
-
-void Interpreter::executeI2CInit(const std::vector<Token> &tokens)
-{
-  int sda = -1;
-  int scl = -1;
-
-  for (size_t i = 0; i < tokens.size(); i++)
-  {
-    bool limit = i + 1 < tokens.size();
-    if (tokens[i].type == TokenType::SDA && limit)
-    {
-      sda = std::stoi(tokens[i + 1].value);
-    }
-
-    if (tokens[i].type == TokenType::SDA && limit)
-    {
-      scl = std::stoi(tokens[i + 1].value);
-    }
-  }
-
-  if (sda == -1 || scl == -1)
-  {
-    ESP_LOGE("Interpreter I2C", "Invalid INIT syntaxis");
-    return;
-  }
-
-  ESP_LOGI("Interpreter I2C", "Init I2C SDA=%d SCL=%d", sda, scl);
-
-  // Inicializar el I2C con el driver
-  // i2c_master_init((gpio_num_t)sda, (gpio_num_t)scl);
-}
-
-void Interpreter::executeI2CWrite(const std::vector<Token> &tokens)
-{
-  if (tokens.size() < 5)
-  {
-    ESP_LOGE("Interpreter I2C", "Invalid WRITE syntax");
-    return;
-  }
-
-  int addr = parse_hex_number(tokens[2].value);
-  int reg = parse_hex_number(tokens[3].value);
-  int data = parse_hex_number(tokens[4].value);
-
-  ESP_LOGI("Interpreter I2C", "WRITE addr=0x%X reg=0x%X data=0x%X",
-           addr, reg, data);
-
-  // i2c_write_byte(addr, reg, data);
-}
-
-void Interpreter::executeI2CRead(const std::vector<Token> &tokens)
-{
-  // Sintaxis mínima: I2C READ addr reg bytes
-  // Sintaxis opcional: I2C READ addr reg bytes => var
-  if (tokens.size() < 5)
-  {
-    ESP_LOGE("Interpreter I2C", "Invalid READ syntax");
-    return;
-  }
-
-  int addr = parse_hex_number(tokens[2].value);
-  int reg = parse_hex_number(tokens[3].value);
-  int bytes = std::stoi(tokens[4].value);
-
-  ESP_LOGI("Interpreter I2C", "READ addr=0x%X reg=0x%X bytes=%d", addr, reg, bytes);
-
-  int result = 1234; // placeholder: i2c_read_bytes(addr, reg, bytes);
-
-  std::string varName = "";
-
-  for (size_t i = 0; i < tokens.size(); i++)
-  {
-    if (tokens[i].type == TokenType::ARROW && i + 1 < tokens.size())
-    {
-      varName = tokens[i + 1].value;
-    }
-  }
-
-  if (varName != "")
-  {
-    _variables[varName] = result;
-    ESP_LOGI("Interpreter I2C", "Stored %d in %s", result, varName.c_str());
-  }
-  else
-  {
-    ESP_LOGI("Interpreter I2C", "Read result (not stored): %d", result);
-  }
 }
