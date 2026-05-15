@@ -14,9 +14,18 @@ void Interpreter::executeI2C(const std::vector<Token> &tokens)
 
   switch (tokens[1].type)
   {
-  case TokenType::INIT:  executeI2CInit(tokens);  break;
-  case TokenType::WRITE: executeI2CWrite(tokens); break;
-  case TokenType::READ:  executeI2CRead(tokens);  break;
+  case TokenType::INIT:
+    executeI2CInit(tokens);
+    break;
+  case TokenType::WRITE:
+    executeI2CWrite(tokens);
+    break;
+  case TokenType::READ:
+    executeI2CRead(tokens);
+    break;
+  case TokenType::READLE:
+    executeI2CReadLE(tokens);
+    break;
   default:
     ESP_LOGE("I2C", "Subcomando desconocido: %s", tokens[1].value.c_str());
   }
@@ -63,9 +72,9 @@ i2c_master_dev_handle_t Interpreter::i2c_get_or_create_device(uint8_t addr, uint
   }
 
   i2c_device_config_t cfg = {};
-  cfg.dev_addr_length  = I2C_ADDR_BIT_LEN_7;
-  cfg.device_address   = addr;
-  cfg.scl_speed_hz     = speed_hz;
+  cfg.dev_addr_length = I2C_ADDR_BIT_LEN_7;
+  cfg.device_address = addr;
+  cfg.scl_speed_hz = speed_hz;
 
   i2c_master_dev_handle_t handle = nullptr;
   esp_err_t err = i2c_master_bus_add_device(i2c_get_bus(), &cfg, &handle);
@@ -110,21 +119,22 @@ void Interpreter::executeI2CWrite(const std::vector<Token> &tokens)
   }
 
   i2c_master_dev_handle_t dev = i2c_get_or_create_device((uint8_t)values[0]);
-  if (!dev) return;
+  if (!dev)
+    return;
 
   esp_err_t err;
 
   if (values.size() == 2)
   {
     // Sin registro — PCF8574 y similares
-    uint8_t buf[1] = { (uint8_t)values[1] };
+    uint8_t buf[1] = {(uint8_t)values[1]};
     err = i2c_master_transmit(dev, buf, 1, pdMS_TO_TICKS(100));
     ESP_LOGI("I2C", "WRITE addr=0x%02X data=0x%02X", values[0], values[1]);
   }
   else
   {
     // Con registro — sensores, memorias, etc.
-    uint8_t buf[2] = { (uint8_t)values[1], (uint8_t)values[2] };
+    uint8_t buf[2] = {(uint8_t)values[1], (uint8_t)values[2]};
     err = i2c_master_transmit(dev, buf, 2, pdMS_TO_TICKS(100));
     ESP_LOGI("I2C", "WRITE addr=0x%02X reg=0x%02X data=0x%02X", values[0], values[1], values[2]);
   }
@@ -169,39 +179,44 @@ void Interpreter::executeI2CRead(const std::vector<Token> &tokens)
     return;
   }
 
-  uint8_t addr  = (uint8_t)values[0];
-  uint8_t reg   = (values.size() >= 3) ? (uint8_t)values[1] : 0xFF; // 0xFF = sin registro
-  int     bytes = (values.size() >= 3) ? values[2] : values[1];
-  bool    has_reg = (values.size() >= 3);
+  uint8_t addr = (uint8_t)values[0];
+  uint8_t reg = (values.size() >= 3) ? (uint8_t)values[1] : 0xFF; // 0xFF = sin registro
+  int bytes = (values.size() >= 3) ? values[2] : values[1];
+  bool has_reg = (values.size() >= 3);
+  (void)has_reg;
 
   if (bytes < 1 || bytes > 32)
   {
     ESP_LOGE("I2C", "READ: bytes invalido (%d)", bytes);
     return;
   }
+  ESP_LOGI("I2C READ", "addr=0x%02X reg=0x%02X bytes=%d var='%s'",
+           addr, reg, bytes, varName.c_str());
 
-  i2c_master_dev_handle_t dev = i2c_get_or_create_device(addr);
-  if (!dev) return;
-
-  // Solo enviar registro si el chip lo necesita
-  if (has_reg)
+  i2c_master_dev_handle_t dev = i2c_get_or_create_device((uint8_t)addr);
+  if (!dev)
   {
-    uint8_t reg_buf = reg;
-    esp_err_t err = i2c_master_transmit(dev, &reg_buf, 1, pdMS_TO_TICKS(100));
-    if (err != ESP_OK)
-    {
-      ESP_LOGE("I2C", "READ: error enviando registro 0x%02X: %s", reg, esp_err_to_name(err));
-      return;
-    }
-  }
-
-  uint8_t rx_buf[32] = {};
-  esp_err_t err = i2c_master_receive(dev, rx_buf, (size_t)bytes, pdMS_TO_TICKS(100));
-  if (err != ESP_OK)
-  {
-    ESP_LOGE("I2C", "READ: error leyendo de 0x%02X: %s", addr, esp_err_to_name(err));
+    ESP_LOGE("I2C READ", "No se pudo obtener device handle");
     return;
   }
+
+  uint8_t reg_buf = (uint8_t)reg;
+  uint8_t rx_buf[32] = {};
+
+  esp_err_t err = i2c_master_transmit_receive(
+      dev,
+      &reg_buf, 1,
+      rx_buf, (size_t)bytes,
+      pdMS_TO_TICKS(100)
+  );
+
+  if (err != ESP_OK)
+  {
+    ESP_LOGE("I2C READ", "transmit_receive falló: %s", esp_err_to_name(err));
+    return;
+  }
+
+  ESP_LOGI("I2C READ", "rx_buf[0]=0x%02X rx_buf[1]=0x%02X", rx_buf[0], rx_buf[1]);
 
   int result = 0;
   int combine = bytes > 4 ? 4 : bytes;
@@ -210,13 +225,83 @@ void Interpreter::executeI2CRead(const std::vector<Token> &tokens)
     result = (result << 8) | rx_buf[i];
   }
 
-  ESP_LOGI("I2C", "READ addr=0x%02X %s bytes=%d -> 0x%02X (%d)",
-           addr,
-           has_reg ? ("reg=0x" + std::to_string(reg)).c_str() : "directo",
-           bytes, result, result);
+  if (bytes == 2 && result > 32767)
+  {
+    result -= 65536;
+  }
+
+  ESP_LOGI("I2C READ", "resultado=%d -> guardando en '%s'", result, varName.c_str());
 
   if (!varName.empty())
   {
     _variables[varName] = result;
   }
+}
+
+// ─────────────────────────────────────────────
+//  I2C READLE
+//  Sintaxis: I2C READLE <addr> <reg> <bytes> -> <var>
+//  Lee <bytes> bytes en orden little-endian (LSB primero).
+//  Para 2 bytes aplica corrección de signo automática.
+// ─────────────────────────────────────────────
+void Interpreter::executeI2CReadLE(const std::vector<Token> &tokens)
+{
+  std::vector<int> values;
+  std::string varName = "";
+
+  for (size_t i = 1; i < tokens.size(); i++)
+  {
+    if (tokens[i].type == TokenType::ARROW && i + 1 < tokens.size())
+    {
+      varName = tokens[i + 1].value;
+      continue;
+    }
+    if (tokens[i].type == TokenType::HEX_NUMBER || tokens[i].type == TokenType::NUMBER)
+      values.push_back(parse_hex_number(tokens[i].value));
+  }
+
+  if (values.size() < 3)
+  {
+    ESP_LOGE("I2C", "READLE: sintaxis invalida. Uso: I2C READLE <addr> <reg> <bytes> -> <var>");
+    return;
+  }
+
+  uint8_t addr  = (uint8_t)values[0];
+  uint8_t reg   = (uint8_t)values[1];
+  int     bytes = values[2];
+
+  if (bytes < 1 || bytes > 4)
+  {
+    ESP_LOGE("I2C", "READLE: bytes invalido (%d), rango 1-4", bytes);
+    return;
+  }
+
+  i2c_master_dev_handle_t dev = i2c_get_or_create_device(addr);
+  if (!dev)
+    return;
+
+  uint8_t reg_buf = reg;
+  uint8_t rx_buf[4] = {};
+
+  esp_err_t err = i2c_master_transmit_receive(dev, &reg_buf, 1, rx_buf, (size_t)bytes, pdMS_TO_TICKS(100));
+  if (err != ESP_OK)
+  {
+    ESP_LOGE("I2C", "READLE: transmit_receive falló: %s", esp_err_to_name(err));
+    return;
+  }
+
+  // Little-endian: el primer byte recibido es el LSB
+  int result = 0;
+  for (int i = bytes - 1; i >= 0; i--)
+    result = (result << 8) | rx_buf[i];
+
+  // Corrección de signo automática para valores de 16 bits
+  if (bytes == 2 && result > 32767)
+    result -= 65536;
+
+  ESP_LOGI("I2C", "READLE addr=0x%02X reg=0x%02X bytes=%d resultado=%d -> '%s'",
+           addr, reg, bytes, result, varName.c_str());
+
+  if (!varName.empty())
+    _variables[varName] = result;
 }

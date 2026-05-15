@@ -29,8 +29,12 @@ enum class TokenType
   // I2C
   I2C,
   INIT,
+  READLE,
   SDA,
   SCL,
+
+  // UNARY COMMANDS
+  SIGN16,
 
   // LITERALS
   STRING,
@@ -39,20 +43,22 @@ enum class TokenType
   IDENTIFIER,
   VALUE,
 
-  // OPERADORES ARITMÉTICOS
+  // ARITHMETIC OPERATORS
   ADD,     // +
   SUB,     // -
   MUL,     // *
   DIV,     // /
   MOD,     // %
-  SHL,     //
+  SHL,     // <<
   SHR,     // >>
   BIT_AND, // &
   BIT_OR,  // |
 
   // SYMBOLS
-  ARROW,
-  ASSIGN,
+  ARROW,   // ->
+  ASSIGN,  // =
+  LPAREN,  // (
+  RPAREN,  // )
 
   // CONDITIONALS
   IS_EQUAL,      // ==
@@ -71,18 +77,23 @@ struct Token
   std::string value;
 
   const char *get_value() const { return value.c_str(); }
+
   const char *get_type() const
   {
     switch (type)
     {
-    case TokenType::LED:
-      return "LED";
-    case TokenType::BUZZER:
-      return "BUZZER";
-    case TokenType::BUTTON:
-      return "BUTTON";
+    case TokenType::FILE:
+      return "FILE";
+    case TokenType::DEVICE:
+      return "DEVICE";
     case TokenType::PIN:
       return "PIN";
+    case TokenType::BUTTON:
+      return "BUTTON";
+    case TokenType::BUZZER:
+      return "BUZZER";
+    case TokenType::LED:
+      return "LED";
     case TokenType::NAME:
       return "NAME";
     case TokenType::WRITE:
@@ -91,16 +102,6 @@ struct Token
       return "READ";
     case TokenType::PRINT:
       return "PRINT";
-    case TokenType::NUMBER:
-      return "NUMBER";
-    case TokenType::IDENTIFIER:
-      return "IDENTIFIER";
-    case TokenType::VALUE:
-      return "VALUE";
-    case TokenType::STRING:
-      return "STRING";
-
-    // CONTROL DE FLUJO
     case TokenType::IF:
       return "IF";
     case TokenType::ELSE:
@@ -113,14 +114,54 @@ struct Token
       return "DLOOP";
     case TokenType::WAIT:
       return "WAIT";
-
-    // OPERADORES / ASIGNACIÓN
-    case TokenType::ASSIGN:
-      return "ASSIGN";
+    case TokenType::I2C:
+      return "I2C";
+    case TokenType::INIT:
+      return "INIT";
+    case TokenType::READLE:
+      return "READLE";
+    case TokenType::SDA:
+      return "SDA";
+    case TokenType::SCL:
+      return "SCL";
+    case TokenType::SIGN16:
+      return "SIGN16";
+    case TokenType::STRING:
+      return "STRING";
+    case TokenType::NUMBER:
+      return "NUMBER";
+    case TokenType::HEX_NUMBER:
+      return "HEX_NUMBER";
+    case TokenType::IDENTIFIER:
+      return "IDENTIFIER";
+    case TokenType::VALUE:
+      return "VALUE";
+    case TokenType::ADD:
+      return "ADD";
+    case TokenType::SUB:
+      return "SUB";
+    case TokenType::MUL:
+      return "MUL";
+    case TokenType::DIV:
+      return "DIV";
+    case TokenType::MOD:
+      return "MOD";
+    case TokenType::SHL:
+      return "SHL";
+    case TokenType::SHR:
+      return "SHR";
+    case TokenType::BIT_AND:
+      return "BIT_AND";
+    case TokenType::BIT_OR:
+      return "BIT_OR";
     case TokenType::ARROW:
       return "ARROW";
-
-    // CONDICIONALES
+    case TokenType::ASSIGN:
+      return "ASSIGN";
+    case TokenType::LPAREN:
+      return "LPAREN";
+    case TokenType::RPAREN:
+      return "RPAREN";
     case TokenType::IS_EQUAL:
       return "IS_EQUAL";
     case TokenType::NOT_EQUAL:
@@ -133,20 +174,17 @@ struct Token
       return "LESS_THAN";
     case TokenType::GREATER_THAN:
       return "GREATER_THAN";
-
     default:
-      return "UNKNOWN_TOKEN";
+      return "UNKNOWN";
     }
   }
 
   Token() : type(TokenType::UNKNOWN), value("") {}
-
   Token(const Token &token) = default;
   Token(TokenType t) : type(t), value("") {}
   Token(TokenType t, const std::string &v) : type(t), value(v) {}
 };
 
 std::vector<Token> tokenize(const std::string &line);
-
 std::ostream &operator<<(std::ostream &out, TokenType type);
 std::ostream &operator<<(std::ostream &out, const Token &token);

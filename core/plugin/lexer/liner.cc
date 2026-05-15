@@ -25,8 +25,10 @@ static const std::unordered_map<std::string, TokenType> keywords = {
 
     {"i2c", TokenType::I2C},
     {"init", TokenType::INIT},
+    {"readle", TokenType::READLE},
     {"sda", TokenType::SDA},
     {"scl", TokenType::SCL},
+    {"sign16", TokenType::SIGN16},
 
     {"->", TokenType::ARROW},
     {"=", TokenType::ASSIGN},
@@ -167,6 +169,18 @@ std::vector<Token> Liner::process()
     {
       flush_word();
       tokens.emplace_back(TokenType::BIT_OR, "|");
+      cursor++;
+    }
+    else if (current_char == '(')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::LPAREN, "(");
+      cursor++;
+    }
+    else if (current_char == ')')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::RPAREN, ")");
       cursor++;
     }
     // SUB es especial — no debe comerse el '->' del ARROW

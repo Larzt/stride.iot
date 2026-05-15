@@ -57,6 +57,10 @@ private:
   // Assignation
   void execute_arrow_allocation(const std::vector<Token> &tokens);
   void execute_simple_allocation(const std::vector<Token> &tokens);
+  void execute_expr_allocation(const std::vector<Token> &tokens);
+  int resolve_expr_token(const Token &token);
+  int eval_expr(const std::vector<Token> &tokens, size_t &pos);
+  int eval_primary(const std::vector<Token> &tokens, size_t &pos);
 
   // Control
   bool evaluate_condition(const std::vector<Token> &tokens);
@@ -68,9 +72,13 @@ private:
   void executeI2CInit(const std::vector<Token> &tokens);
   void executeI2CWrite(const std::vector<Token> &tokens);
   void executeI2CRead(const std::vector<Token> &tokens);
+  void executeI2CReadLE(const std::vector<Token> &tokens);
   i2c_master_dev_handle_t i2c_get_or_create_device(uint8_t addr, uint32_t speed_hz = 100000);
 
-  std::map<uint8_t, i2c_master_dev_handle_t> _i2c_devices; // addr -> handle
+  // Unary commands
+  void execute_sign16_command(const std::vector<Token> &tokens);
+
+  std::map<uint8_t, i2c_master_dev_handle_t> _i2c_devices;
   bool _i2c_initialized = false;
 
   // Variables

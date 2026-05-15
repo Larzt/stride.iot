@@ -179,6 +179,56 @@ void testProgramScenarios(TestRunner &runner)
   check_token(runner, t7[0], TokenType::ENDIF, "endif", "endif keyword");
   check_token(runner, t8[0], TokenType::DLOOP, "dloop", "dloop at the end");
 }
+void testParenthesesTokens(TestRunner &runner)
+{
+  runner.setTest("Test Parentheses");
+
+  auto tokens = tokenize("result = (a + b) * c");
+
+  check(runner, tokens.size(), static_cast<size_t>(9), "exactamente 9 tokens");
+  check_token(runner, tokens[2], TokenType::LPAREN, "(", "lparen");
+  check_token(runner, tokens[6], TokenType::RPAREN, ")", "rparen");
+  check_token(runner, tokens[7], TokenType::MUL,    "*", "mul after rparen");
+}
+
+void testI2CReadLETokens(TestRunner &runner)
+{
+  runner.setTest("Test I2C READLE");
+
+  auto tokens = tokenize("i2c readle 0x76 0x88 2 -> dig_T1");
+
+  check(runner, tokens.size(), static_cast<size_t>(7), "exactamente 7 tokens");
+  check_token(runner, tokens[0], TokenType::I2C,        "i2c",    "i2c");
+  check_token(runner, tokens[1], TokenType::READLE,     "readle", "readle");
+  check_token(runner, tokens[2], TokenType::HEX_NUMBER, "0x76",   "addr");
+  check_token(runner, tokens[3], TokenType::HEX_NUMBER, "0x88",   "register");
+  check_token(runner, tokens[4], TokenType::NUMBER,     "2",      "bytes");
+  check_token(runner, tokens[5], TokenType::ARROW,      "->",     "arrow");
+  check_token(runner, tokens[6], TokenType::IDENTIFIER, "dig_T1", "target");
+}
+
+void testSign16Tokens(TestRunner &runner)
+{
+  runner.setTest("Test SIGN16");
+
+  auto tokens = tokenize("sign16 dig_T2");
+
+  check(runner, tokens.size(), static_cast<size_t>(2), "exactamente 2 tokens");
+  check_token(runner, tokens[0], TokenType::SIGN16,     "sign16", "sign16 keyword");
+  check_token(runner, tokens[1], TokenType::IDENTIFIER, "dig_T2", "variable");
+}
+
+void testSign16UpperCase(TestRunner &runner)
+{
+  runner.setTest("Test SIGN16 uppercase");
+
+  auto tokens = tokenize("SIGN16 myVar");
+
+  check(runner, tokens.size(), static_cast<size_t>(2), "exactamente 2 tokens");
+  check_token(runner, tokens[0], TokenType::SIGN16,     "SIGN16", "sign16 uppercase");
+  check_token(runner, tokens[1], TokenType::IDENTIFIER, "myVar",  "variable");
+}
+
 // -----------------------------------------------------
 // Error path
 // -----------------------------------------------------
@@ -433,6 +483,10 @@ int main()
   testExpressionWithHex(runner);
   testExpressionWithBitOr(runner);
   testNegativeNumberInExpression(runner);
+  testParenthesesTokens(runner);
+  testI2CReadLETokens(runner);
+  testSign16Tokens(runner);
+  testSign16UpperCase(runner);
 
   std::cout << CYAN << "PASSED: " << runner.passed << std::endl;
   std::cout << CYAN << "FAILED: " << runner.failed << std::endl;

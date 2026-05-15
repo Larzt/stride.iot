@@ -34,6 +34,20 @@ void open_card_task(void *pvParameters)
 
     StrideLogger::Log(StrideSubsystem::Card, "SD card mounted successfully");
 
+    // Garantiza que el fichero de log por defecto existe antes de que
+    // cualquier programa intente escribir en él.
+    std::string default_log = Blackboard::MountPoint + Blackboard::CurrentLogFile;
+    FILE *lf = fopen(default_log.c_str(), "a");
+    if (lf)
+    {
+        fclose(lf);
+        StrideLogger::Log(StrideSubsystem::Card, "Log file listo: %s", default_log.c_str());
+    }
+    else
+    {
+        StrideLogger::Error(StrideSubsystem::Card, "No se pudo crear el log por defecto: %s", default_log.c_str());
+    }
+
     if (sdReadTaskHandle)
         xTaskNotifyGive(sdReadTaskHandle);
 
