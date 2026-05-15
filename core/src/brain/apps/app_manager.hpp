@@ -1,20 +1,27 @@
-// #pragma once
+#pragma once
 
-// #include <string>
+#include <vector>
+#include <dirent.h>
 
-// #include "stride_locator.hpp"
+#include "app.hpp"
+#include "blackboard.hpp"
+#include "stride_locator.hpp"
+#include "stride_subscription.hpp"
 
-// #include "types.hpp"
+class AppManager
+{
+public:
+  static AppManager &Instance();
 
-// class AppManager
-// {
-// public:
-//   AppManager();
-//   ~AppManager() = default;
+  void scan();
 
-//   bool save_app(const AppDef *app);
-//   bool load_app(const AppDef *app);
+  const std::vector<AppDescriptor> &apps() const { return _apps; }
+  int version() const { return _version; }
 
-// private:
-//   std::vector<AppDef> _apps;
-// };
+private:
+  AppManager();
+
+  std::vector<AppDescriptor> _apps;
+  int _version = 0;
+  StrideSubscription _file_subscription;
+};

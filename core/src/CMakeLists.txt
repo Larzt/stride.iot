@@ -11,7 +11,7 @@ idf_component_register(
   "tasks"
   "utils"
   "utils/timer"
-  "utils/app"
+  "brain/apps"
   "utils/parse"
   "utils/sink"
   "utils/hexer"

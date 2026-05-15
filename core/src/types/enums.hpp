@@ -16,7 +16,6 @@ enum class StateType {
   Startup,
   Main,
   View,
-  ImuMonitor,
 };
 
 enum class InputType

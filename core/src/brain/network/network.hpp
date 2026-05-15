@@ -18,6 +18,7 @@ public:
   ~Network() {};
 
   void connect();
+  void reconnect();
   void start_access_point();
   static bool load_net_credentials(std::string &ssid, std::string &pass);
   static void save_net_credentials(const std::string &ssid, const std::string &pass);

@@ -53,12 +53,14 @@ esp_err_t Editor::handler(httpd_req_t *req)
 
   std::string html =
     "<div class='card'>"
-    "<h2>Editor: " + std::string(file) + "</h2>"
-    "<textarea id='editor' style='width:100%; height:300px;'>" +
-    content +
-    "</textarea>"
-    "<br><br>"
-    "<button onclick=\"saveFile('" + std::string(file) + "')\">Guardar</button>"
+    "<div class='page-hdr'>"
+    "<div class='page-hdr-left'>"
+    "<button class='btn' onclick=\"loadPage('/browser')\">&#8592; Volver</button>"
+    "<h2 style='font-size:.95rem;font-weight:600;color:var(--muted)'>" + std::string(file) + "</h2>"
+    "</div>"
+    "<button class='btn btn-primary' onclick=\"saveFile('" + std::string(file) + "')\">Guardar</button>"
+    "</div>"
+    "<textarea class='editor-area' id='editor'>" + content + "</textarea>"
     "</div>";
 
   httpd_resp_set_type(req, "text/html");

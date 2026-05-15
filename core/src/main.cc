@@ -9,10 +9,11 @@
 #include "card_task.hpp"
 #include "display_task.hpp"
 #include "expander_task.hpp"
-#include "imu_task.hpp"
+#include "app_manager.hpp"
 
 extern "C" void app_main(void)
 {
+    AppManager::Instance();
 
     Display::Instance().begin();
 
@@ -20,7 +21,6 @@ extern "C" void app_main(void)
 
     ESP_ERROR_CHECK(i2c_master_init());
     vTaskDelay(pdMS_TO_TICKS(100));
-    ESP_ERROR_CHECK(imu_init());
     ESP_ERROR_CHECK(expander_init());
 
     class Network network;
@@ -35,27 +35,38 @@ extern "C" void app_main(void)
         StrideLogger::Log(StrideSubsystem::Server, "Server changed mode");
         server_mode_led.toggle(); });
 
-    xTaskCreatePinnedToCore(
-        hear_server_mode_button_task,
-        "HearServerModeButton",
-        4096,
-        NULL,
-        5,
-        NULL,
-        1);
+    // Core 0: system tasks, monitoring, lightweight
+    // Core 0 also runs the WiFi stack and HTTP server handlers by default.
+    // Tasks here are mostly sleeping or event-driven and can safely log or
+    // update Blackboard observables to notify the rest of the system.
 
     xTaskCreatePinnedToCore(
-        hear_program_selected_file_button_task,
-        "HearServerModeButton",
+        hear_server_mode_button_task,
+        "ServerModeBtn",
         4096,
         NULL,
         5,
         NULL,
-        1);
+        0);
 
     xTaskCreatePinnedToCore(
         open_card_task,
-        "OpenCard",
+        "CardMonitor",
+        6144,
+        NULL,
+        5,
+        NULL,
+        0);
+
+    // Core 1: computation and user-facing tasks
+    // display_task owns the SPI2 bus (TFT).
+    // hear_program_selected_file_button_task calls Display::transition_to()
+    // directly, so it must share a core with display_task.
+    // read_card_task runs the DSL interpreter (CPU-intensive, I2C, SD file I/O).
+
+    xTaskCreatePinnedToCore(
+        hear_program_selected_file_button_task,
+        "ProgramSelectBtn",
         4096,
         NULL,
         5,
@@ -64,8 +75,8 @@ extern "C" void app_main(void)
 
     xTaskCreatePinnedToCore(
         read_card_task,
-        "OpenCard",
-        4096,
+        "ScriptRunner",
+        8192,
         NULL,
         5,
         &sdReadTaskHandle,
@@ -79,25 +90,6 @@ extern "C" void app_main(void)
         5,
         NULL,
         1);
-
-    xTaskCreate(
-        imu_task,
-        "imu_task",
-        4096,
-        nullptr,
-        5,
-        &g_imu_task_handle);
-
-    vTaskSuspend(g_imu_task_handle);
-
-    // xTaskCreatePinnedToCore(
-    //     expander_task,
-    //     "Expand",
-    //     4096,
-    //     NULL,
-    //     5,
-    //     NULL,
-    //     0);
 
     while (true)
     {

@@ -2,7 +2,6 @@
 #include "display.hpp"
 #include "startup_state.hpp"
 #include "view_state.hpp"
-#include "imu_monitor_state.hpp"
 
 bool is_executable_program(const std::string &file)
 {
@@ -32,12 +31,6 @@ void hear_program_selected_file_button_task(void *pvParameters)
           vTaskDelay(pdMS_TO_TICKS(10));
           continue;
         }
-      }
-      else if (app.type == AppType::Builtin)
-      {
-        Display::Instance().transition_to(std::make_unique<ImuMonitorState>());
-        vTaskDelay(pdMS_TO_TICKS(10));
-        continue;
       }
       else
       {

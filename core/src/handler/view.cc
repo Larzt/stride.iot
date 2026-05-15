@@ -72,22 +72,23 @@ esp_err_t View::handler(httpd_req_t *req)
 
   size_t nextOffset = offset + content.size();
 
+  size_t prevOffset = offset > 2048 ? offset - 2048 : 0;
+  std::string fileEnc = std::string(file);
+
   std::string html =
       "<div class='card'>"
-      "<h2>Viewer: " +
-      std::string(file) + "</h2>"
-                          "<pre style='background:#111;color:#0f0;padding:10px;overflow:auto;'>" +
-      content +
-      "</pre>"
-      "<div style='margin-top:10px;'>"
-      "<button onclick=\"loadPage('/view?file=" +
-      std::string(file) +
-      "&offset=" + std::to_string(offset > 2048 ? offset - 2048 : 0) +
-      "')\">⬅ Prev</button> "
-      "<button onclick=\"loadPage('/view?file=" +
-      std::string(file) +
-      "&offset=" + std::to_string(nextOffset) +
-      "')\">Next ➡</button>"
+      "<div class='page-hdr'>"
+      "<div class='page-hdr-left'>"
+      "<button class='btn' onclick=\"loadPage('/browser')\">&#8592; Volver</button>"
+      "<h2 style='font-size:.95rem;font-weight:600;color:var(--muted)'>" + fileEnc + "</h2>"
+      "</div>"
+      "</div>"
+      "<div class='log-view'>" + content + "</div>"
+      "<div class='pagination'>"
+      "<button class='btn' " + (offset == 0 ? "disabled style='opacity:.4;cursor:default'" : "") +
+      " onclick=\"loadPage('/view?file=" + fileEnc + "&offset=" + std::to_string(prevOffset) + "')\">&#8592; Anterior</button>"
+      "<button class='btn' onclick=\"loadPage('/view?file=" + fileEnc + "&offset=" + std::to_string(nextOffset) + "')\">Siguiente &#8594;</button>"
+      "<span class='page-info'>Offset: " + std::to_string(offset) + "</span>"
       "</div>"
       "</div>";
 

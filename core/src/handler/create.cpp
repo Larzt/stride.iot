@@ -45,6 +45,8 @@ esp_err_t Create::handler(httpd_req_t *req)
 
     fclose(f);
 
+    Blackboard::FileListVersion = Blackboard::FileListVersion.get() + 1;
+
     httpd_resp_set_type(req, "text/plain");
     httpd_resp_sendstr(req, "OK");
 

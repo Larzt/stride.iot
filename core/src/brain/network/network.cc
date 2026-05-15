@@ -142,6 +142,32 @@ bool Network::load_net_credentials(std::string &ssid, std::string &password)
   return true;
 }
 
+void Network::reconnect()
+{
+  std::string ssid, pass;
+  if (!load_net_credentials(ssid, pass))
+  {
+    StrideLogger::Warning(StrideSubsystem::Network, "No STA credentials saved, cannot reconnect");
+    return;
+  }
+
+  StrideLogger::Log(StrideSubsystem::Network, "Manual reconnect to %s", ssid.c_str());
+  _current_station_retries = 0;
+
+  Blackboard::WifiIpAddress = "0.0.0.0";
+  Blackboard::CurrentNetworkMode = NetworkMode::Access;
+
+  wifi_config_t sta_config = {};
+  strlcpy((char *)sta_config.sta.ssid, ssid.c_str(), sizeof(sta_config.sta.ssid));
+  strlcpy((char *)sta_config.sta.password, pass.c_str(), sizeof(sta_config.sta.password));
+
+  esp_wifi_stop();
+  esp_wifi_set_mode(WIFI_MODE_STA);
+  esp_wifi_set_config(WIFI_IF_STA, &sta_config);
+  esp_wifi_start();
+  // WIFI_EVENT_STA_START fires → event_handler calls esp_wifi_connect()
+}
+
 void Network::save_net_credentials(const std::string &ssid, const std::string &password)
 {
   nvs_handle_t handle;

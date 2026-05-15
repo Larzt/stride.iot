@@ -30,19 +30,38 @@ esp_err_t Browser::handler(httpd_req_t *req)
   }
 
   std::string html;
+  int fileCount = 0;
+
+  // Pre-count files for the header
+  {
+    DIR *d2 = opendir(Blackboard::MountPoint.c_str());
+    if (d2) {
+      struct dirent *e2;
+      while ((e2 = readdir(d2)) != NULL) {
+        std::string fn = e2->d_name;
+        if (fn == "." || fn == ".." || fn.length() < 4 || fn.find('.') == std::string::npos) continue;
+        std::string ex = fn.substr(fn.find_last_of('.'));
+        if (ex == ".log" || ex == ".LOG" || ex == ".str" || ex == ".STR") fileCount++;
+      }
+      closedir(d2);
+    }
+  }
+
+  html += "<div class=\"card\">";
+  html += "<div class=\"page-hdr\">";
+  html += "<div>";
+  html += "<h2 style=\"font-size:1rem;font-weight:600;\">Archivos SD</h2>";
+  html += "<p style=\"font-size:.78rem;color:var(--muted);margin-top:.2rem;\">" + std::to_string(fileCount) + " archivo" + (fileCount != 1 ? "s" : "") + "</p>";
+  html += "</div>";
+  html += "<button class=\"btn btn-primary\" onclick=\"createFile()\">+ Nuevo</button>";
+  html += "</div>";
 
   html += R"rawliteral(
-<div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
-        <h2>📁 Explorador SD</h2>
-        <button onclick="createFile()">+ Nuevo</button>
-    </div>
-
-    <table style="width:100%; border-collapse:collapse;">
+    <table class="ftable">
         <thead>
             <tr>
-                <th style="text-align:left;">Archivo</th>
-                <th>Acciones</th>
+                <th>Nombre</th>
+                <th style="text-align:right;">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -72,12 +91,12 @@ esp_err_t Browser::handler(httpd_req_t *req)
     hasFiles = true;
 
     html += "<tr>";
-    html += "<td>📄 " + fileName + "</td>";
-    html += "<td>";
-    html += "<button title='Editar' onclick=\"editFile('" + fileName + "')\">✏️</button>";
-    html += "<button title='Ver' onclick=\"viewFile('" + fileName + "')\">👁</button>";
-    html += "<button title='Eliminar' onclick=\"deleteFile('" + fileName + "')\">🗑</button>";
-    html += "</td>";
+    html += "<td><span class=\"fname\">&#128196; " + fileName + "</span></td>";
+    html += "<td><div class=\"actions\">";
+    html += "<button class=\"btn-icon\" title=\"Editar\" onclick=\"editFile('" + fileName + "')\">&#9998;</button>";
+    html += "<button class=\"btn-icon\" title=\"Ver\" onclick=\"viewFile('" + fileName + "')\">&#128065;</button>";
+    html += "<button class=\"btn-icon\" title=\"Eliminar\" onclick=\"deleteFile('" + fileName + "')\" style=\"color:#ef4444\">&#128465;</button>";
+    html += "</div></td>";
     html += "</tr>";
   }
 
@@ -85,14 +104,13 @@ esp_err_t Browser::handler(httpd_req_t *req)
 
   if (!hasFiles)
   {
-    html += "<tr><td colspan='2'>SD vacía</td></tr>";
+    html += "<tr><td colspan='2'>"
+            "<div class=\"empty\"><div class=\"empty-icon\">&#128193;</div>"
+            "<p>No hay archivos en la SD</p></div>"
+            "</td></tr>";
   }
 
-  html += R"rawliteral(
-        </tbody>
-    </table>
-</div>
-)rawliteral";
+  html += "</tbody></table></div>";
 
   httpd_resp_set_type(req, "text/html");
   httpd_resp_send(req, html.c_str(), html.length());

@@ -10,6 +10,7 @@
 #include "save.hpp"
 #include "librarie.hpp"
 #include "wifi.hpp"
+#include "settings.hpp"
 
 Server::Server() {}
 
@@ -85,6 +86,7 @@ void Server::load_handlers()
   this->add_handler(new Save());
   this->add_handler(new Librarie());
   this->add_handler(new Ping());
+  this->add_handler(new Settings());
   if (Blackboard::CurrentServerMode.get() == ServerMode::Developer)
   {
     // The first time you turn on the device,

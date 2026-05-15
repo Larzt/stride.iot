@@ -12,7 +12,6 @@ enum StrideSubsystem
   Interpreter,
   Screen,
   Expander,
-  IMU,
   Utils,
 };
 
@@ -62,8 +61,6 @@ private:
       return "STRIDE_SCREEN";
     case StrideSubsystem::Expander:
       return "STRIDE_EXPANDER";
-    case StrideSubsystem::IMU:
-      return "STRIDE_IMU";
     default:
       return "STRIDE";
     }

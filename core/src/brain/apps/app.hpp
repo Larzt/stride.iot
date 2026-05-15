@@ -5,14 +5,13 @@
 
 struct AppDescriptor
 {
-  AppType type;
+  AppType type = AppType::Script;
   std::string name;
   std::string path;
 
   bool operator==(const AppDescriptor &other) const
   {
-    return name == other.name &&
-           path == other.path;
+    return name == other.name && path == other.path;
   }
 
   bool operator!=(const AppDescriptor &other) const

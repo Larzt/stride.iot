@@ -37,7 +37,9 @@ struct Blackboard
   static inline gpio_num_t EnterButton = GPIO_NUM_33;
 
   // System
+  static inline int MaxSDRetries = 3;
   static inline int ReloadTimePressed = 1000;
+  static inline int ReconnectHoldMs = 3000;
   static inline std::string MountPoint = "/sdcard";
   static inline std::string CurrentLogFile = "/prints.log";
   static inline StrideObservable<AppDescriptor> CurrentProgram;
@@ -47,13 +49,10 @@ struct Blackboard
   // Handlers
   static inline gpio_num_t PingLed = GPIO_NUM_25;
 
-  // IMU
-  static inline float ImuRoll = 0;
-  static inline float ImuPitch = 0;
-  static inline float ImuYaw = 0;
-
   // Display
   static inline uint32_t LoadingTimeMs = 2000;
+  static inline StrideObservable<int> FileListVersion{0};
+  static inline StrideObservable<bool> SdCardMounted{false};
 
   // Defaults
   static void Reset()
