@@ -61,6 +61,18 @@ std::vector<Token> Liner::process()
       tokens.emplace_back(TokenType::ARROW, "->");
       cursor += 2;
     }
+    else if (current_char == '<' && next_char == '<')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::SHL, "<<");
+      cursor += 2;
+    }
+    else if (current_char == '>' && next_char == '>')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::SHR, ">>");
+      cursor += 2;
+    }
     else if (current_char == '=' && next_char == '=')
     {
       flush_word();
@@ -121,7 +133,50 @@ std::vector<Token> Liner::process()
       tokens.emplace_back(TokenType::GREATER_THAN, ">");
       cursor++;
     }
-
+    else if (current_char == '+')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::ADD, "+");
+      cursor++;
+    }
+    else if (current_char == '*')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::MUL, "*");
+      cursor++;
+    }
+    else if (current_char == '/')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::DIV, "/");
+      cursor++;
+    }
+    else if (current_char == '%')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::MOD, "%");
+      cursor++;
+    }
+    else if (current_char == '&')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::BIT_AND, "&");
+      cursor++;
+    }
+    else if (current_char == '|')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::BIT_OR, "|");
+      cursor++;
+    }
+    // SUB es especial — no debe comerse el '->' del ARROW
+    // El ARROW ya se maneja antes, así que aquí '-' solo aparece como resta
+    else if (current_char == '-')
+    {
+      flush_word();
+      tokens.emplace_back(TokenType::SUB, "-");
+      cursor++;
+    }
     else
     {
       current_word += current_char;

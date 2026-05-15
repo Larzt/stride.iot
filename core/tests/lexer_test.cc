@@ -159,28 +159,26 @@ void testProgramScenarios(TestRunner &runner)
 {
   runner.setTest("Test Program Scenarios");
 
-  std::string line = "device=led name=mL pin=17\n\
-device=button name=mB pin=35\n\
-loop -1\n\
-if mB == 1\n\
-write=mL on\n\
-else\n\
-write=mL off\n\
-endif\n\
-dloop";
+  // Tokenizar línea por línea como hace el intérprete real
+  auto t0 = tokenize("device=led name=mL pin=17");
+  auto t1 = tokenize("device=button name=mB pin=35");
+  auto t2 = tokenize("loop -1");
+  auto t3 = tokenize("if mB == 1");
+  auto t4 = tokenize("write=mL on");
+  auto t5 = tokenize("else");
+  auto t6 = tokenize("write=mL off");
+  auto t7 = tokenize("endif");
+  auto t8 = tokenize("dloop");
 
-  auto tokens = tokenize(line);
-  check(runner, tokens.size() > 0, true, "non empty");
-  check_token(runner, tokens[0], TokenType::DEVICE, "device", "first token");
-  check_token(runner, tokens[2], TokenType::LED, "led", "led type");
-  check_token(runner, tokens[18], TokenType::LOOP, "loop", "loop keyword");
-  check_token(runner, tokens[20], TokenType::IF, "if", "if keyword");
-  check_token(runner, tokens[22], TokenType::IS_EQUAL, "==", "equal operator");
-  check_token(runner, tokens[24], TokenType::WRITE, "write", "write command");
-  check_token(runner, tokens[33], TokenType::ENDIF, "endif", "endif keyword");
-  check_token(runner, tokens.back(), TokenType::DLOOP, "dloop", "dloop at the end");
+  check_token(runner, t0[0], TokenType::DEVICE, "device", "device keyword");
+  check_token(runner, t0[2], TokenType::LED, "led", "led type");
+  check_token(runner, t2[0], TokenType::LOOP, "loop", "loop keyword");
+  check_token(runner, t3[0], TokenType::IF, "if", "if keyword");
+  check_token(runner, t3[2], TokenType::IS_EQUAL, "==", "equal operator");
+  check_token(runner, t4[0], TokenType::WRITE, "write", "write command");
+  check_token(runner, t7[0], TokenType::ENDIF, "endif", "endif keyword");
+  check_token(runner, t8[0], TokenType::DLOOP, "dloop", "dloop at the end");
 }
-
 // -----------------------------------------------------
 // Error path
 // -----------------------------------------------------
@@ -280,6 +278,123 @@ void testOnlyGarbage(TestRunner &runner)
   }
 }
 
+void testArithmeticOperators(TestRunner &runner)
+{
+  runner.setTest("Test Arithmetic Operators");
+
+  auto tokens = tokenize("a + b a - b a * b a / b a % b");
+
+  check_token(runner, tokens[1], TokenType::ADD, "+", "+");
+  check_token(runner, tokens[4], TokenType::SUB, "-", "-");
+  check_token(runner, tokens[7], TokenType::MUL, "*", "*");
+  check_token(runner, tokens[10], TokenType::DIV, "/", "/");
+  check_token(runner, tokens[13], TokenType::MOD, "%", "%");
+}
+
+void testBitwiseOperators(TestRunner &runner)
+{
+  runner.setTest("Test Bitwise Operators");
+
+  auto tokens = tokenize("a & b a | b a << b a >> b");
+
+  check_token(runner, tokens[1], TokenType::BIT_AND, "&", "&");
+  check_token(runner, tokens[4], TokenType::BIT_OR, "|", "|");
+  check_token(runner, tokens[7], TokenType::SHL, "<<", "<<");
+  check_token(runner, tokens[10], TokenType::SHR, ">>", ">>");
+}
+
+void testArrowNotConfusedWithSub(TestRunner &runner)
+{
+  runner.setTest("Test Arrow Not Confused With Sub");
+
+  // '->' debe ser ARROW, no SUB + GREATER_THAN
+  auto tokens = tokenize("3 -> b");
+
+  check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
+  check_token(runner, tokens[0], TokenType::NUMBER, "3", "numero");
+  check_token(runner, tokens[1], TokenType::ARROW, "->", "arrow");
+  check_token(runner, tokens[2], TokenType::IDENTIFIER, "b", "variable");
+}
+
+void testShrNotConfusedWithGreaterEqual(TestRunner &runner)
+{
+  runner.setTest("Test SHR Not Confused With >= or >");
+
+  // '>>' debe ser SHR, no dos GREATER_THAN
+  auto tokens = tokenize("a >> 4");
+
+  check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
+  check_token(runner, tokens[0], TokenType::IDENTIFIER, "a", "variable");
+  check_token(runner, tokens[1], TokenType::SHR, ">>", "shr");
+  check_token(runner, tokens[2], TokenType::NUMBER, "4", "numero");
+}
+
+void testShlNotConfusedWithLessEqual(TestRunner &runner)
+{
+  runner.setTest("Test SHL Not Confused With <= or <");
+
+  // '<<' debe ser SHL, no dos LESS_THAN
+  auto tokens = tokenize("a << 4");
+
+  check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
+  check_token(runner, tokens[0], TokenType::IDENTIFIER, "a", "variable");
+  check_token(runner, tokens[1], TokenType::SHL, "<<", "shl");
+  check_token(runner, tokens[2], TokenType::NUMBER, "4", "numero");
+}
+
+void testExpressionAssignment(TestRunner &runner)
+{
+  runner.setTest("Test Expression Assignment");
+
+  // var = a + b
+  auto tokens = tokenize("result = a + b");
+
+  check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
+  check_token(runner, tokens[0], TokenType::IDENTIFIER, "result", "variable destino");
+  check_token(runner, tokens[1], TokenType::ASSIGN, "=", "assign");
+  check_token(runner, tokens[2], TokenType::IDENTIFIER, "a", "operando izq");
+  check_token(runner, tokens[3], TokenType::ADD, "+", "operador");
+  check_token(runner, tokens[4], TokenType::IDENTIFIER, "b", "operando der");
+}
+
+void testExpressionWithHex(TestRunner &runner)
+{
+  runner.setTest("Test Expression With Hex");
+
+  // caso real del BMP280: temp_raw = t_msb << 12
+  auto tokens = tokenize("temp_raw = t_msb << 12");
+
+  check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
+  check_token(runner, tokens[0], TokenType::IDENTIFIER, "temp_raw", "variable destino");
+  check_token(runner, tokens[1], TokenType::ASSIGN, "=", "assign");
+  check_token(runner, tokens[2], TokenType::IDENTIFIER, "t_msb", "operando");
+  check_token(runner, tokens[3], TokenType::SHL, "<<", "shift left");
+  check_token(runner, tokens[4], TokenType::NUMBER, "12", "bits");
+}
+
+void testExpressionWithBitOr(TestRunner &runner)
+{
+  runner.setTest("Test Expression With Bit OR");
+
+  // caso real del BMP280: temp_raw = temp_raw | t_lsb_s
+  auto tokens = tokenize("temp_raw = temp_raw | t_lsb_s");
+
+  check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
+  check_token(runner, tokens[3], TokenType::BIT_OR, "|", "bit or");
+}
+
+void testNegativeNumberInExpression(TestRunner &runner)
+{
+  runner.setTest("Test Negative Number In Expression");
+
+  // '-' entre dos valores debe ser SUB, no parte de un número negativo
+  auto tokens = tokenize("a = b - 1");
+
+  check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
+  check_token(runner, tokens[3], TokenType::SUB, "-", "sub operator");
+  check_token(runner, tokens[4], TokenType::NUMBER, "1", "numero");
+}
+
 int main()
 {
   TestRunner runner;
@@ -307,6 +422,17 @@ int main()
   testWeirdSpacing(runner);
   testEmptyInput(runner);
   testOnlyGarbage(runner);
+
+  // Operadores aritméticos y bitwise
+  testArithmeticOperators(runner);
+  testBitwiseOperators(runner);
+  testArrowNotConfusedWithSub(runner);
+  testShrNotConfusedWithGreaterEqual(runner);
+  testShlNotConfusedWithLessEqual(runner);
+  testExpressionAssignment(runner);
+  testExpressionWithHex(runner);
+  testExpressionWithBitOr(runner);
+  testNegativeNumberInExpression(runner);
 
   std::cout << CYAN << "PASSED: " << runner.passed << std::endl;
   std::cout << CYAN << "FAILED: " << runner.failed << std::endl;

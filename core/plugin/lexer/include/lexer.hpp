@@ -39,6 +39,17 @@ enum class TokenType
   IDENTIFIER,
   VALUE,
 
+  // OPERADORES ARITMÉTICOS
+  ADD,     // +
+  SUB,     // -
+  MUL,     // *
+  DIV,     // /
+  MOD,     // %
+  SHL,     //
+  SHR,     // >>
+  BIT_AND, // &
+  BIT_OR,  // |
+
   // SYMBOLS
   ARROW,
   ASSIGN,
@@ -51,7 +62,7 @@ enum class TokenType
   LESS_THAN,     // <
   GREATER_THAN,  // >
 
-  UNKNOWN
+  UNKNOWN,
 };
 
 struct Token
