@@ -35,6 +35,9 @@ partition_table/*.bin
 venv/
 env/
 
+# MkDocs build output
+site/
+
 # Logs
 *.log
 
