@@ -1,7 +1,6 @@
 #include "librarie.hpp"
 #include <string>
 
-
 Librarie::Librarie()
 {
   _librarie_uri = {

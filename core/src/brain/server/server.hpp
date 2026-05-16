@@ -6,7 +6,6 @@
 #include "handler.hpp"
 #include "enums.hpp"
 
-
 class Server
 {
 

@@ -41,10 +41,8 @@ public:
     int headAngle = (elapsed / 2) % 360;
     int tailAngle = (headAngle - segmentLen + 360) % 360;
 
-    // Remove last circle
     tft.fillArc(centerX, centerY, rIn - 1, rOut + 1, headAngle, tailAngle, TFT_BLACK);
 
-    // Draw new circle
     tft.fillArc(centerX, centerY, rIn, rOut, tailAngle, headAngle, TFT_YELLOW);
   }
 

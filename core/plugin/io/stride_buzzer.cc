@@ -1,6 +1,5 @@
 #include "stride_buzzer.hpp"
 
-
 void StrideBuzzer::start()
 {
   gpio_reset_pin(_pin);

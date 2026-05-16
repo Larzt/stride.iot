@@ -18,8 +18,6 @@ public:
 
     draw_static(ctx);
 
-    // Fires from the interpreter task. Only set a flag — the actual
-    // transition_to() runs in on_update() inside the display task.
     _running_subscription = Blackboard::RunningProgramName.subscribe(
         [this](const std::string &name)
         {

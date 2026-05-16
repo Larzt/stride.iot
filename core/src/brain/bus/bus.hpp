@@ -4,14 +4,12 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 
-// SD Card
 #define SD_HOST    SPI3_HOST
 #define SD_MOSI    GPIO_NUM_23
 #define SD_MISO    GPIO_NUM_19
 #define SD_CLK     GPIO_NUM_18
 #define SD_CS      GPIO_NUM_5
 
-// TFT Display (using LovyanGFX)
 #define TFT_HOST   SPI2_HOST
 #define TFT_RST    4
 #define TFT_RS     2

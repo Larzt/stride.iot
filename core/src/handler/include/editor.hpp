@@ -4,7 +4,6 @@
 #include "blackboard.hpp"
 #include "stride_logger.hpp"
 
-
 class Editor : public Handler
 {
 public:

@@ -1,4 +1,4 @@
-file(GLOB SRCS "stride_buzzer.cc" "*.cc")
+file(GLOB SRCS "stride_led.cc" "stride_button.cc" "stride_buzzer.cc" "*.cc")
 
 idf_component_register(
     SRCS ${SRCS}

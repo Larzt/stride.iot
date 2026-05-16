@@ -54,7 +54,6 @@ esp_err_t Settings::handler(httpd_req_t *req)
 
       "<div style='display:flex;flex-direction:column;gap:.75rem;margin-top:.25rem;'>"
 
-      // Mode row
       "<div style='display:flex;align-items:center;justify-content:space-between;"
       "padding:.75rem;border:1px solid var(--border);border-radius:var(--r);'>"
       "<span style='font-size:.82rem;color:var(--muted);'>Modo de red</span>"
@@ -62,7 +61,6 @@ esp_err_t Settings::handler(httpd_req_t *req)
       modeColor + ";'>" + modeLabel + "</span>"
                                       "</div>"
 
-                                      // SSID row
                                       "<div style='display:flex;align-items:center;justify-content:space-between;"
                                       "padding:.75rem;border:1px solid var(--border);border-radius:var(--r);'>"
                                       "<span style='font-size:.82rem;color:var(--muted);'>Red</span>"
@@ -70,7 +68,6 @@ esp_err_t Settings::handler(httpd_req_t *req)
       ssid + "</span>"
              "</div>"
 
-             // IP row
              "<div style='display:flex;align-items:center;justify-content:space-between;"
              "padding:.75rem;border:1px solid var(--border);border-radius:var(--r);'>"
              "<span style='font-size:.82rem;color:var(--muted);'>Direcci&oacute;n IP</span>"
@@ -78,7 +75,6 @@ esp_err_t Settings::handler(httpd_req_t *req)
       ip + "</span>"
            "</div>"
 
-           // Server mode row
            "<div style='display:flex;align-items:center;justify-content:space-between;"
            "padding:.75rem;border:1px solid var(--border);border-radius:var(--r);'>"
            "<span style='font-size:.82rem;color:var(--muted);'>Modo servidor</span>"

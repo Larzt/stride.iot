@@ -1,11 +1,8 @@
 #include "interpreter.hpp"
 
-// ─────────────────────────────────────────────
-//  Dispatcher principal: I2C INIT / WRITE / READ
-// ─────────────────────────────────────────────
 void Interpreter::executeI2C(const std::vector<Token> &tokens)
 {
-  // tokens[0] = I2C, tokens[1] = INIT | WRITE | READ
+
   if (tokens.size() < 2)
   {
     ESP_LOGE("I2C", "Comando I2C incompleto");
@@ -31,11 +28,6 @@ void Interpreter::executeI2C(const std::vector<Token> &tokens)
   }
 }
 
-// ─────────────────────────────────────────────
-//  I2C INIT
-//  Sintaxis: I2C INIT
-//  Los pines SDA/SCL están fijos en i2c_bus.hpp
-// ─────────────────────────────────────────────
 void Interpreter::executeI2CInit(const std::vector<Token> &tokens)
 {
   if (_i2c_initialized)
@@ -44,7 +36,6 @@ void Interpreter::executeI2CInit(const std::vector<Token> &tokens)
     return;
   }
 
-  // No inicializamos el bus, solo verificamos que ya existe
   if (i2c_get_bus() == nullptr)
   {
     ESP_LOGE("I2C", "Bus I2C no disponible. Asegurate de llamar a i2c_master_init() en el arranque");
@@ -54,15 +45,13 @@ void Interpreter::executeI2CInit(const std::vector<Token> &tokens)
   _i2c_initialized = true;
   ESP_LOGI("I2C", "Bus I2C adquirido correctamente");
 }
-// ─────────────────────────────────────────────
-//  Helper: obtiene o crea el handle para una dirección
-// ─────────────────────────────────────────────
+
 i2c_master_dev_handle_t Interpreter::i2c_get_or_create_device(uint8_t addr, uint32_t speed_hz)
 {
   auto it = _i2c_devices.find(addr);
   if (it != _i2c_devices.end())
   {
-    return it->second; // ya existe
+    return it->second;
   }
 
   if (!_i2c_initialized)
@@ -90,14 +79,6 @@ i2c_master_dev_handle_t Interpreter::i2c_get_or_create_device(uint8_t addr, uint
   return handle;
 }
 
-// ─────────────────────────────────────────────
-//  I2C WRITE
-//  Sintaxis 1: I2C WRITE <addr> <reg> <data>
-//  Ejemplo 1:  I2C WRITE 0x27 0x00 0xFE
-// ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
-//  Sintaxis 2: I2C WRITE <addr> <data>
-//  Ejemplo 1:  I2C WRITE 0x27 0xFE
-// ─────────────────────────────────────────────
 void Interpreter::executeI2CWrite(const std::vector<Token> &tokens)
 {
   std::vector<int> values;
@@ -110,8 +91,6 @@ void Interpreter::executeI2CWrite(const std::vector<Token> &tokens)
     }
   }
 
-  // Sintaxis: I2C WRITE <addr> <data>          (PCF8574, sin registro)
-  // Sintaxis: I2C WRITE <addr> <reg> <data>    (con registro)
   if (values.size() < 2)
   {
     ESP_LOGE("I2C", "WRITE: sintaxis invalida. Uso: I2C WRITE <addr> <data> [<reg>]");
@@ -126,14 +105,14 @@ void Interpreter::executeI2CWrite(const std::vector<Token> &tokens)
 
   if (values.size() == 2)
   {
-    // Sin registro — PCF8574 y similares
+
     uint8_t buf[1] = {(uint8_t)values[1]};
     err = i2c_master_transmit(dev, buf, 1, pdMS_TO_TICKS(100));
     ESP_LOGI("I2C", "WRITE addr=0x%02X data=0x%02X", values[0], values[1]);
   }
   else
   {
-    // Con registro — sensores, memorias, etc.
+
     uint8_t buf[2] = {(uint8_t)values[1], (uint8_t)values[2]};
     err = i2c_master_transmit(dev, buf, 2, pdMS_TO_TICKS(100));
     ESP_LOGI("I2C", "WRITE addr=0x%02X reg=0x%02X data=0x%02X", values[0], values[1], values[2]);
@@ -145,14 +124,6 @@ void Interpreter::executeI2CWrite(const std::vector<Token> &tokens)
   }
 }
 
-// ─────────────────────────────────────────────
-//  I2C READ
-//  Sintaxis: I2C READ <addr> <reg> <bytes> -> <var>
-//  Ejemplo:  I2C READ 0x27 0x00 1 -> resultado
-// ─────────────────────────────────────────────
-//  Sintaxis: I2C READ <addr> <bytes> -> <var>
-//  Ejemplo:  I2C READ 0x27 1 -> resultado
-// ─────────────────────────────────────────────
 void Interpreter::executeI2CRead(const std::vector<Token> &tokens)
 {
   std::vector<int> values;
@@ -171,8 +142,6 @@ void Interpreter::executeI2CRead(const std::vector<Token> &tokens)
     }
   }
 
-  // I2C READ <addr> <bytes> -> var          (sin registro, PCF8574)
-  // I2C READ <addr> <reg> <bytes> -> var    (con registro, sensores)
   if (values.size() < 2)
   {
     ESP_LOGE("I2C", "READ: sintaxis invalida");
@@ -180,7 +149,7 @@ void Interpreter::executeI2CRead(const std::vector<Token> &tokens)
   }
 
   uint8_t addr = (uint8_t)values[0];
-  uint8_t reg = (values.size() >= 3) ? (uint8_t)values[1] : 0xFF; // 0xFF = sin registro
+  uint8_t reg = (values.size() >= 3) ? (uint8_t)values[1] : 0xFF;
   int bytes = (values.size() >= 3) ? values[2] : values[1];
   bool has_reg = (values.size() >= 3);
   (void)has_reg;
@@ -238,12 +207,6 @@ void Interpreter::executeI2CRead(const std::vector<Token> &tokens)
   }
 }
 
-// ─────────────────────────────────────────────
-//  I2C READLE
-//  Sintaxis: I2C READLE <addr> <reg> <bytes> -> <var>
-//  Lee <bytes> bytes en orden little-endian (LSB primero).
-//  Para 2 bytes aplica corrección de signo automática.
-// ─────────────────────────────────────────────
 void Interpreter::executeI2CReadLE(const std::vector<Token> &tokens)
 {
   std::vector<int> values;
@@ -290,12 +253,10 @@ void Interpreter::executeI2CReadLE(const std::vector<Token> &tokens)
     return;
   }
 
-  // Little-endian: el primer byte recibido es el LSB
   int result = 0;
   for (int i = bytes - 1; i >= 0; i--)
     result = (result << 8) | rx_buf[i];
 
-  // Corrección de signo automática para valores de 16 bits
   if (bytes == 2 && result > 32767)
     result -= 65536;
 

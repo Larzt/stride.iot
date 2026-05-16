@@ -16,7 +16,7 @@ public:
   void on();
   void off();
   void toggle();
-  void set(bool state); // true = ON, false = OFF
+  void set(bool state);
   bool get() const { return _state; }
 
 private:

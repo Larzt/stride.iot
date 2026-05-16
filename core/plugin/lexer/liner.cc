@@ -183,8 +183,7 @@ std::vector<Token> Liner::process()
       tokens.emplace_back(TokenType::RPAREN, ")");
       cursor++;
     }
-    // SUB es especial — no debe comerse el '->' del ARROW
-    // El ARROW ya se maneja antes, así que aquí '-' solo aparece como resta
+
     else if (current_char == '-')
     {
       flush_word();

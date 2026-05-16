@@ -16,7 +16,6 @@ const std::vector<httpd_uri_t *> &Create::uris() const
   return _uris;
 }
 
-
 esp_err_t Create::handler(httpd_req_t *req)
 {
     char query[128] = {0};
@@ -35,7 +34,7 @@ esp_err_t Create::handler(httpd_req_t *req)
 
     std::string path = Blackboard::MountPoint + "/" + std::string(file);
 
-    FILE *f = fopen(path.c_str(), "w");  // crea archivo vacío
+    FILE *f = fopen(path.c_str(), "w");
 
     if (!f)
     {

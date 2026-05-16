@@ -89,12 +89,9 @@ void Server::load_handlers()
   this->add_handler(new Settings());
   if (Blackboard::CurrentServerMode.get() == ServerMode::Developer)
   {
-    // The first time you turn on the device,
-    // it will be in developer mode; once you've set up the Wi-Fi,
-    // switch to user mode so that this handler cannot be accessed.
+
     this->add_handler(new Wifi());
-    // this->add_handler(new StatusHandler());
-    // this->add_handler(new ConfigHandler());
+
   }
 }
 

@@ -1,6 +1,5 @@
 #include "stride_led.hpp"
 
-
 void StrideLed::start()
 {
   gpio_reset_pin(_pin);

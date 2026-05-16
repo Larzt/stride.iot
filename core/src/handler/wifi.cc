@@ -32,8 +32,6 @@ esp_err_t Wifi::get_handler(httpd_req_t *req)
     return ESP_FAIL;
   }
 
-  // Wifi *self = static_cast<Wifi *>(req->user_ctx);
-
   std::string ssid, password;
   net->load_net_credentials(ssid, password);
 
@@ -141,7 +139,6 @@ esp_err_t Wifi::post_handler(httpd_req_t *req)
 {
   class Network *net = StrideLocator::Get<class Network>();
 
-  // Wifi *self = static_cast<Wifi *>(req->user_ctx);
   char buf[256];
   int ret = httpd_req_recv(req, buf, sizeof(buf) - 1);
   if (ret <= 0)

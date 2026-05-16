@@ -75,8 +75,6 @@ bool StrideButton::wait_for_long_press(uint32_t timeout_ms)
   return false;
 }
 
-
-
 bool StrideButton::read_raw()
 {
   int level = gpio_get_level(_pin);

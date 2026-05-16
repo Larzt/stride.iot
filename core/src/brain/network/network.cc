@@ -14,7 +14,6 @@ void Network::connect()
 {
   std::string ssid, password;
 
-  // NVS init
   esp_err_t res = nvs_flash_init();
   if (res == ESP_ERR_NVS_NO_FREE_PAGES || res == ESP_ERR_NVS_NEW_VERSION_FOUND)
   {
@@ -23,15 +22,12 @@ void Network::connect()
   }
   ESP_ERROR_CHECK(res);
 
-  // Net init
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-  // WiFi init
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-  // Event handlers
   ESP_ERROR_CHECK(esp_event_handler_instance_register(
       WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, this, NULL));
 
@@ -165,7 +161,7 @@ void Network::reconnect()
   esp_wifi_set_mode(WIFI_MODE_STA);
   esp_wifi_set_config(WIFI_IF_STA, &sta_config);
   esp_wifi_start();
-  // WIFI_EVENT_STA_START fires → event_handler calls esp_wifi_connect()
+
 }
 
 void Network::save_net_credentials(const std::string &ssid, const std::string &password)

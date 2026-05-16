@@ -6,7 +6,7 @@
 
 enum class TokenType
 {
-  // BASICS
+
   FILE,
   DEVICE,
   PIN,
@@ -18,7 +18,6 @@ enum class TokenType
   READ,
   PRINT,
 
-  // FLOW CONTROL
   IF,
   ELSE,
   ENDIF,
@@ -26,47 +25,41 @@ enum class TokenType
   DLOOP,
   WAIT,
 
-  // I2C
   I2C,
   INIT,
   READLE,
   SDA,
   SCL,
 
-  // UNARY COMMANDS
   SIGN16,
 
-  // LITERALS
   STRING,
   NUMBER,
   HEX_NUMBER,
   IDENTIFIER,
   VALUE,
 
-  // ARITHMETIC OPERATORS
-  ADD,     // +
-  SUB,     // -
-  MUL,     // *
-  DIV,     // /
-  MOD,     // %
-  SHL,     // <<
-  SHR,     // >>
-  BIT_AND, // &
-  BIT_OR,  // |
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  MOD,
+  SHL,
+  SHR,
+  BIT_AND,
+  BIT_OR,
 
-  // SYMBOLS
-  ARROW,   // ->
-  ASSIGN,  // =
-  LPAREN,  // (
-  RPAREN,  // )
+  ARROW,
+  ASSIGN,
+  LPAREN,
+  RPAREN,
 
-  // CONDITIONALS
-  IS_EQUAL,      // ==
-  NOT_EQUAL,     // !=
-  LESS_EQUAL,    // <=
-  GREATER_EQUAL, // >=
-  LESS_THAN,     // <
-  GREATER_THAN,  // >
+  IS_EQUAL,
+  NOT_EQUAL,
+  LESS_EQUAL,
+  GREATER_EQUAL,
+  LESS_THAN,
+  GREATER_THAN,
 
   UNKNOWN,
 };

@@ -47,14 +47,12 @@ private:
   void execute_simple_block_command(const std::vector<Token> &tokens);
   void execute_range(const StrideProgram &program, size_t start, size_t end);
 
-  // Simple commands
   void load_device_command(const std::vector<Token> &tokens);
   int resolve_value(const Token &token);
   void execute_write_command(const std::vector<Token> &tokens);
   void execute_wait_command(const std::vector<Token> &tokens);
   void execute_print_command(const std::vector<Token> &tokens);
 
-  // Assignation
   void execute_arrow_allocation(const std::vector<Token> &tokens);
   void execute_simple_allocation(const std::vector<Token> &tokens);
   void execute_expr_allocation(const std::vector<Token> &tokens);
@@ -62,12 +60,10 @@ private:
   int eval_expr(const std::vector<Token> &tokens, size_t &pos);
   int eval_primary(const std::vector<Token> &tokens, size_t &pos);
 
-  // Control
   bool evaluate_condition(const std::vector<Token> &tokens);
   size_t execute_control_loop(const StrideProgram &program, size_t index);
   size_t execute_control_if(const StrideProgram &program, size_t index);
 
-  // I2C
   void executeI2C(const std::vector<Token> &tokens);
   void executeI2CInit(const std::vector<Token> &tokens);
   void executeI2CWrite(const std::vector<Token> &tokens);
@@ -75,13 +71,11 @@ private:
   void executeI2CReadLE(const std::vector<Token> &tokens);
   i2c_master_dev_handle_t i2c_get_or_create_device(uint8_t addr, uint32_t speed_hz = 100000);
 
-  // Unary commands
   void execute_sign16_command(const std::vector<Token> &tokens);
 
   std::map<uint8_t, i2c_master_dev_handle_t> _i2c_devices;
   bool _i2c_initialized = false;
 
-  // Variables
   StrideVariable<int> _variables;
   StrideVariable<StrideLed *> _leds;
   StrideVariable<StrideBuzzer *> _buzzers;

@@ -19,7 +19,6 @@ void display_task(void *pvParameters)
     Display::Instance().update();
     auto state = Display::Instance().get_current_state();
 
-    // Left + Right held simultaneously → WiFi reconnect
     bool both_held = left_button.is_pressed() && right_button.is_pressed();
     if (both_held)
     {
@@ -46,7 +45,6 @@ void display_task(void *pvParameters)
       combo_fired = false;
     }
 
-    // Individual button events — suppressed while the combo is active
     if (!both_held)
     {
       InputEvent event;

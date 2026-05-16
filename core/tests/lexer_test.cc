@@ -8,9 +8,6 @@
 
 #include "check.hpp"
 
-// -----------------------------------------------------
-// Happy Path
-// -----------------------------------------------------
 void testKeywordTokens(TestRunner &runner)
 {
   runner.setTest("Test Keywords");
@@ -159,7 +156,6 @@ void testProgramScenarios(TestRunner &runner)
 {
   runner.setTest("Test Program Scenarios");
 
-  // Tokenizar línea por línea como hace el intérprete real
   auto t0 = tokenize("device=led name=mL pin=17");
   auto t1 = tokenize("device=button name=mB pin=35");
   auto t2 = tokenize("loop -1");
@@ -229,9 +225,6 @@ void testSign16UpperCase(TestRunner &runner)
   check_token(runner, tokens[1], TokenType::IDENTIFIER, "myVar",  "variable");
 }
 
-// -----------------------------------------------------
-// Error path
-// -----------------------------------------------------
 void testInvalidTokens(TestRunner &runner)
 {
   runner.setTest("Test Invalid Tokens");
@@ -357,7 +350,6 @@ void testArrowNotConfusedWithSub(TestRunner &runner)
 {
   runner.setTest("Test Arrow Not Confused With Sub");
 
-  // '->' debe ser ARROW, no SUB + GREATER_THAN
   auto tokens = tokenize("3 -> b");
 
   check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
@@ -370,7 +362,6 @@ void testShrNotConfusedWithGreaterEqual(TestRunner &runner)
 {
   runner.setTest("Test SHR Not Confused With >= or >");
 
-  // '>>' debe ser SHR, no dos GREATER_THAN
   auto tokens = tokenize("a >> 4");
 
   check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
@@ -383,7 +374,6 @@ void testShlNotConfusedWithLessEqual(TestRunner &runner)
 {
   runner.setTest("Test SHL Not Confused With <= or <");
 
-  // '<<' debe ser SHL, no dos LESS_THAN
   auto tokens = tokenize("a << 4");
 
   check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
@@ -396,7 +386,6 @@ void testExpressionAssignment(TestRunner &runner)
 {
   runner.setTest("Test Expression Assignment");
 
-  // var = a + b
   auto tokens = tokenize("result = a + b");
 
   check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
@@ -411,7 +400,6 @@ void testExpressionWithHex(TestRunner &runner)
 {
   runner.setTest("Test Expression With Hex");
 
-  // caso real del BMP280: temp_raw = t_msb << 12
   auto tokens = tokenize("temp_raw = t_msb << 12");
 
   check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
@@ -426,7 +414,6 @@ void testExpressionWithBitOr(TestRunner &runner)
 {
   runner.setTest("Test Expression With Bit OR");
 
-  // caso real del BMP280: temp_raw = temp_raw | t_lsb_s
   auto tokens = tokenize("temp_raw = temp_raw | t_lsb_s");
 
   check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
@@ -437,7 +424,6 @@ void testNegativeNumberInExpression(TestRunner &runner)
 {
   runner.setTest("Test Negative Number In Expression");
 
-  // '-' entre dos valores debe ser SUB, no parte de un número negativo
   auto tokens = tokenize("a = b - 1");
 
   check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
@@ -449,7 +435,6 @@ int main()
 {
   TestRunner runner;
 
-  // Happy Path
   testKeywordTokens(runner);
   testIdentifierTokens(runner);
   testNumberTokens(runner);
@@ -462,7 +447,6 @@ int main()
   testDeviceButtonDeclaration(runner);
   testProgramScenarios(runner);
 
-  // Error Path
   testUnclosedString(runner);
   testInvalidTokens(runner);
   testInvalidHex(runner);
@@ -473,7 +457,6 @@ int main()
   testEmptyInput(runner);
   testOnlyGarbage(runner);
 
-  // Operadores aritméticos y bitwise
   testArithmeticOperators(runner);
   testBitwiseOperators(runner);
   testArrowNotConfusedWithSub(runner);

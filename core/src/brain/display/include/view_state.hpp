@@ -85,7 +85,6 @@ private:
       if (line.empty())
         continue;
 
-      // Parse "[timestamp]: message" format
       if (line[0] == '[')
       {
         size_t close = line.find(']');

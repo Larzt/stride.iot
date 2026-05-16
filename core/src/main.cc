@@ -35,11 +35,6 @@ extern "C" void app_main(void)
         StrideLogger::Log(StrideSubsystem::Server, "Server changed mode");
         server_mode_led.toggle(); });
 
-    // Core 0: system tasks, monitoring, lightweight
-    // Core 0 also runs the WiFi stack and HTTP server handlers by default.
-    // Tasks here are mostly sleeping or event-driven and can safely log or
-    // update Blackboard observables to notify the rest of the system.
-
     xTaskCreatePinnedToCore(
         hear_server_mode_button_task,
         "ServerModeBtn",
@@ -57,12 +52,6 @@ extern "C" void app_main(void)
         5,
         NULL,
         0);
-
-    // Core 1: computation and user-facing tasks
-    // display_task owns the SPI2 bus (TFT).
-    // hear_program_selected_file_button_task calls Display::transition_to()
-    // directly, so it must share a core with display_task.
-    // read_card_task runs the DSL interpreter (CPU-intensive, I2C, SD file I/O).
 
     xTaskCreatePinnedToCore(
         hear_program_selected_file_button_task,

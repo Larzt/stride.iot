@@ -1,0 +1,67 @@
+site_name: STRIDE
+site_description: Firmware modular ESP32 — TFG STRIDE
+site_url: https://larzt.github.io/tfg-stride/
+repo_url: https://github.com/Larzt/tfg-stride
+repo_name: Larzt/tfg-stride
+edit_uri: edit/main/README.md
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: es
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Cambiar a modo oscuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Cambiar a modo claro
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - callouts
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets:
+      base_path:
+        - .
+      check_paths: true
+
+validation:
+  links:
+    absolute_links: ignore
+    unrecognized_links: ignore

@@ -2,10 +2,6 @@
 
 #include <unistd.h>
 
-// ─────────────────────────────────────────────
-//  Helper: detecta si una línea es una asignación con expresión
-//  IDENTIFIER ASSIGN <expr...>
-// ─────────────────────────────────────────────
 static bool is_expr_assignment(const std::vector<Token> &tokens)
 {
   return tokens.size() >= 3 &&
@@ -13,19 +9,12 @@ static bool is_expr_assignment(const std::vector<Token> &tokens)
          tokens[1].type == TokenType::ASSIGN;
 }
 
-// ─────────────────────────────────────────────
-//  Helper: detecta si una línea es una asignación con arrow
-//  <valor> -> IDENTIFIER   (exactamente 3 tokens)
-// ─────────────────────────────────────────────
 static bool is_arrow_assignment(const std::vector<Token> &tokens)
 {
   return tokens.size() == 3 &&
          tokens[1].type == TokenType::ARROW;
 }
 
-// ─────────────────────────────────────────────
-//  execute()
-// ─────────────────────────────────────────────
 void Interpreter::execute(const StrideProgram &program)
 {
   if (program.empty())
@@ -111,23 +100,17 @@ void Interpreter::execute(const StrideProgram &program)
   }
 }
 
-// ─────────────────────────────────────────────
-//  execute_simple_block_command
-//  Usado dentro de LOOP, IF, ELSE
-// ─────────────────────────────────────────────
 void Interpreter::execute_simple_block_command(const std::vector<Token> &tokens)
 {
   if (tokens.empty())
     return;
 
-  // Asignación con expresión: var = a + b  (cualquier longitud >= 3)
   if (is_expr_assignment(tokens))
   {
     execute_expr_allocation(tokens);
     return;
   }
 
-  // Asignación con arrow: 0 -> var
   if (is_arrow_assignment(tokens))
   {
     execute_arrow_allocation(tokens);
@@ -172,9 +155,6 @@ void Interpreter::execute_simple_block_command(const std::vector<Token> &tokens)
   }
 }
 
-// ─────────────────────────────────────────────
-//  execute_range — ejecuta líneas [start, end)
-// ─────────────────────────────────────────────
 void Interpreter::execute_range(const StrideProgram &program, size_t start, size_t end)
 {
   for (size_t i = start; i < end; ++i)
@@ -199,11 +179,6 @@ void Interpreter::execute_range(const StrideProgram &program, size_t start, size
   }
 }
 
-// ─────────────────────────────────────────────
-//  executeLogfile
-//  Sintaxis: FILE "nombre.log"
-//  Cambia el fichero de log activo y lo crea si no existe.
-// ─────────────────────────────────────────────
 void Interpreter::executeLogfile(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 2 || tokens[1].type != TokenType::STRING)
@@ -234,9 +209,6 @@ void Interpreter::executeLogfile(const std::vector<Token> &tokens)
   StrideLogger::Log(StrideSubsystem::Interpreter, "Log file activo: %s", path.c_str());
 }
 
-// ─────────────────────────────────────────────
-//  load_device_command
-// ─────────────────────────────────────────────
 void Interpreter::load_device_command(const std::vector<Token> &tokens)
 {
   std::string name;
@@ -299,9 +271,6 @@ void Interpreter::load_device_command(const std::vector<Token> &tokens)
   }
 }
 
-// ─────────────────────────────────────────────
-//  resolve_value — para WRITE y evaluate_condition
-// ─────────────────────────────────────────────
 int Interpreter::resolve_value(const Token &token)
 {
   if (token.type == TokenType::NUMBER)
@@ -332,9 +301,6 @@ int Interpreter::resolve_value(const Token &token)
   return 0;
 }
 
-// ─────────────────────────────────────────────
-//  execute_write_command
-// ─────────────────────────────────────────────
 void Interpreter::execute_write_command(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 4)
@@ -364,9 +330,6 @@ void Interpreter::execute_write_command(const std::vector<Token> &tokens)
   StrideLogger::Error(StrideSubsystem::Interpreter, "Device '%s' not found", name.c_str());
 }
 
-// ─────────────────────────────────────────────
-//  execute_wait_command
-// ─────────────────────────────────────────────
 void Interpreter::execute_wait_command(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 2)
@@ -379,9 +342,6 @@ void Interpreter::execute_wait_command(const std::vector<Token> &tokens)
   vTaskDelay(pdMS_TO_TICKS(seconds * 1000));
 }
 
-// ─────────────────────────────────────────────
-//  execute_print_command
-// ─────────────────────────────────────────────
 void Interpreter::execute_print_command(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 2)
@@ -414,11 +374,6 @@ void Interpreter::execute_print_command(const std::vector<Token> &tokens)
   sink_file(path, timestamp_msg);
 }
 
-// ─────────────────────────────────────────────
-//  execute_arrow_allocation
-//  Sintaxis: <literal> -> <var>
-//  Acepta NUMBER y HEX_NUMBER
-// ─────────────────────────────────────────────
 void Interpreter::execute_arrow_allocation(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 3)
@@ -436,7 +391,6 @@ void Interpreter::execute_arrow_allocation(const std::vector<Token> &tokens)
     {
       variable_name = tokens[i + 1].value;
 
-      // El valor está justo antes del ARROW
       const Token &val_token = tokens[i - 1];
       if (val_token.type == TokenType::NUMBER)
         variable_value = std::stoi(val_token.value);
@@ -460,10 +414,6 @@ void Interpreter::execute_arrow_allocation(const std::vector<Token> &tokens)
   _variables[variable_name] = variable_value;
 }
 
-// ─────────────────────────────────────────────
-//  execute_simple_allocation
-//  Sintaxis: <var> = <literal>  (exactamente 3 tokens, sin operadores)
-// ─────────────────────────────────────────────
 void Interpreter::execute_simple_allocation(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 3)
@@ -477,10 +427,6 @@ void Interpreter::execute_simple_allocation(const std::vector<Token> &tokens)
   _variables[variable_name] = variable_value;
 }
 
-// ─────────────────────────────────────────────
-//  resolve_expr_token
-//  Resuelve un token individual como valor numérico
-// ─────────────────────────────────────────────
 int Interpreter::resolve_expr_token(const Token &token)
 {
   if (token.type == TokenType::NUMBER)
@@ -502,9 +448,6 @@ int Interpreter::resolve_expr_token(const Token &token)
   return 0;
 }
 
-// ─────────────────────────────────────────────
-//  Helpers para el evaluador recursivo
-// ─────────────────────────────────────────────
 static bool is_binary_op(TokenType t)
 {
   switch (t)
@@ -536,9 +479,6 @@ static int apply_op(int lhs, TokenType op, int rhs)
   }
 }
 
-// ─────────────────────────────────────────────
-//  eval_primary — resuelve un valor o sub-expresión entre paréntesis
-// ─────────────────────────────────────────────
 int Interpreter::eval_primary(const std::vector<Token> &tokens, size_t &pos)
 {
   if (pos >= tokens.size())
@@ -546,19 +486,16 @@ int Interpreter::eval_primary(const std::vector<Token> &tokens, size_t &pos)
 
   if (tokens[pos].type == TokenType::LPAREN)
   {
-    pos++; // consume (
+    pos++;
     int result = eval_expr(tokens, pos);
     if (pos < tokens.size() && tokens[pos].type == TokenType::RPAREN)
-      pos++; // consume )
+      pos++;
     return result;
   }
 
   return resolve_expr_token(tokens[pos++]);
 }
 
-// ─────────────────────────────────────────────
-//  eval_expr — evalúa una expresión left-to-right con soporte de paréntesis
-// ─────────────────────────────────────────────
 int Interpreter::eval_expr(const std::vector<Token> &tokens, size_t &pos)
 {
   int result = eval_primary(tokens, pos);
@@ -573,26 +510,19 @@ int Interpreter::eval_expr(const std::vector<Token> &tokens, size_t &pos)
   return result;
 }
 
-// ─────────────────────────────────────────────
-//  execute_expr_allocation
-//  Sintaxis: var = <expr>   con soporte de paréntesis
-// ─────────────────────────────────────────────
 void Interpreter::execute_expr_allocation(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 3)
     return;
 
   std::string var_name = tokens[0].value;
-  size_t pos = 2; // salta IDENTIFIER y ASSIGN
+  size_t pos = 2;
   int result = eval_expr(tokens, pos);
 
   _variables[var_name] = result;
   ESP_LOGI("EXPR", "%s = %d", var_name.c_str(), result);
 }
 
-// ─────────────────────────────────────────────
-//  evaluate_condition
-// ─────────────────────────────────────────────
 bool Interpreter::evaluate_condition(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 4)
@@ -632,11 +562,6 @@ bool Interpreter::evaluate_condition(const std::vector<Token> &tokens)
   }
 }
 
-// ─────────────────────────────────────────────
-//  execute_sign16_command
-//  Sintaxis: SIGN16 <var>
-//  Convierte el valor de <var> a entero con signo de 16 bits.
-// ─────────────────────────────────────────────
 void Interpreter::execute_sign16_command(const std::vector<Token> &tokens)
 {
   if (tokens.size() < 2 || tokens[1].type != TokenType::IDENTIFIER)
@@ -659,9 +584,6 @@ void Interpreter::execute_sign16_command(const std::vector<Token> &tokens)
   ESP_LOGI("SIGN16", "%s = %d", name.c_str(), it->second);
 }
 
-// ─────────────────────────────────────────────
-//  execute_control_loop
-// ─────────────────────────────────────────────
 size_t Interpreter::execute_control_loop(const StrideProgram &program, size_t index)
 {
   const auto &tokens = program[index];
@@ -672,7 +594,6 @@ size_t Interpreter::execute_control_loop(const StrideProgram &program, size_t in
     return index;
   }
 
-  // Localizar el DLOOP correspondiente
   size_t loop_start = index + 1;
   size_t loop_end = loop_start;
   bool has_dloop = false;
@@ -693,7 +614,6 @@ size_t Interpreter::execute_control_loop(const StrideProgram &program, size_t in
     return index;
   }
 
-  // ¿Es un loop condicional? LOOP <var> <op> <val>
   bool is_conditional = (tokens.size() > 2) && evaluate_condition(tokens);
 
   if (is_conditional)
@@ -730,9 +650,6 @@ size_t Interpreter::execute_control_loop(const StrideProgram &program, size_t in
   return loop_end;
 }
 
-// ─────────────────────────────────────────────
-//  execute_control_if
-// ─────────────────────────────────────────────
 size_t Interpreter::execute_control_if(const StrideProgram &program, size_t index)
 {
   const auto &tokens = program[index];

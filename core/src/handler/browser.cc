@@ -32,7 +32,6 @@ esp_err_t Browser::handler(httpd_req_t *req)
   std::string html;
   int fileCount = 0;
 
-  // Pre-count files for the header
   {
     DIR *d2 = opendir(Blackboard::MountPoint.c_str());
     if (d2) {
@@ -77,7 +76,6 @@ esp_err_t Browser::handler(httpd_req_t *req)
     if (fileName == "." || fileName == "..")
       continue;
 
-    // Validar extensión (evitar crash si nombre corto)
     if (fileName.length() < 4)
       continue;
 

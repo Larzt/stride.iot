@@ -22,9 +22,6 @@ void MainState::on_enter(Display &ctx)
   draw_header(ctx);
   draw_files(ctx);
 
-  // These callbacks may fire from any task (network, HTTP server, etc.).
-  // They must NOT touch the TFT or SPI bus — only set a flag for on_update()
-  // to process safely within the display task.
   _ip_subscription = Blackboard::LocalIpAddress.subscribe([this](const std::string &)
                                                           { _ip_dirty = true; });
   _wifi_subscription = Blackboard::WifiIpAddress.subscribe([this](const std::string &)
@@ -36,11 +33,9 @@ void MainState::on_enter(Display &ctx)
   _running_subscription = Blackboard::RunningProgramName.subscribe([this](const std::string &name)
                                                                    { if (!name.empty()) _running_dirty = true; });
 
-  // A program may have already started running between transitions.
   if (!Blackboard::RunningProgramName.get().empty())
     _running_dirty = true;
 
-  // Cursor only changes from on_input(), which runs in the display task — safe to draw here.
   _cursor_subscription = _cursor_position.subscribe([this, &ctx](int)
                                                     {
     _cursor_anim_x   = 0;
@@ -99,7 +94,6 @@ void MainState::on_update(Display &ctx)
     }
   }
 
-  // ">" bounce animation on the selected row (only touches a tiny strip, no full redraw)
   if (!_apps.empty() && lgfx::millis() - _last_cursor_anim_ms > 100)
   {
     _last_cursor_anim_ms = lgfx::millis();
@@ -188,16 +182,14 @@ void MainState::draw_files(Display &ctx)
       for (auto &c : ext) c = (char)tolower((unsigned char)c);
     }
 
-    // Name always at x=16; selected items show ">" at animated x position
     tft.drawString(name.c_str(), 16, y + 4);
     if (selected)
       tft.drawString(">", 4 + _cursor_anim_x, y + 4);
 
-    // File-type badge, right-aligned
     if (!ext.empty())
     {
-      uint32_t badge_color = (ext == "str") ? 0x07E0u   // green
-                           : (ext == "log") ? 0xFD20u   // orange
+      uint32_t badge_color = (ext == "str") ? 0x07E0u
+                           : (ext == "log") ? 0xFD20u
                                             : (uint32_t)TFT_DARKGREY;
       tft.setTextColor(badge_color, bg);
       std::string badge = ext;
@@ -219,7 +211,6 @@ void MainState::draw_cursor_anim(Display &ctx)
   int y = LIST_Y + sel * LINE_H;
   if (y >= tft.height() - FOOTER_H) return;
 
-  // Clear the narrow strip where ">" can appear (x=4..10, 6px char width)
   tft.fillRect(4, y + 1, 11, LINE_H - 3, TFT_BLACK);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.setTextSize(1);

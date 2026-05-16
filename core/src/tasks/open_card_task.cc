@@ -21,11 +21,7 @@ void open_card_task(void *pvParameters)
 
   while (true)
   {
-    // GPIO5 is the native CS0 for SPI3/VSPI on ESP32. Initializing SPI3 in
-    // native IOMUX mode partially associates GPIO5 with the bus; the SDSPI
-    // driver also leaves it matrix-routed after a failed mount or device
-    // removal. Reset it to a clean state before every mount attempt so
-    // sdspi_host_init_device() can configure it without a GPIO conflict.
+
     gpio_reset_pin(SD_CS);
 
     esp_err_t ret = esp_vfs_fat_sdspi_mount(
@@ -55,7 +51,6 @@ void open_card_task(void *pvParameters)
     if (sdReadTaskHandle)
       xTaskNotifyGive(sdReadTaskHandle);
 
-    // Health-check loop: detect card removal via opendir.
     int failures = 0;
     while (true)
     {
