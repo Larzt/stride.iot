@@ -64,7 +64,6 @@ void open_card_task(void *pvParameters)
       DIR *d = opendir(Blackboard::MountPoint.c_str());
       if (d)
       {
-        StrideLogger::Warning(StrideSubsystem::Card, "SD card check if is removed");
         closedir(d);
         failures = 0;
       }
