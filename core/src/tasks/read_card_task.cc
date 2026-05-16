@@ -56,6 +56,8 @@ void read_card_task(void *pvParameters)
 
     StrideLogger::Log(StrideSubsystem::Card, "Program loadded succesfully (%d lines)", program.size());
 
+    Blackboard::RunningProgramName = app.name;
     interpreter.execute(program);
+    Blackboard::RunningProgramName = std::string("");
   }
 }

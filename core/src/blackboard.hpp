@@ -53,6 +53,9 @@ struct Blackboard
   static inline uint32_t LoadingTimeMs = 2000;
   static inline StrideObservable<int> FileListVersion{0};
   static inline StrideObservable<bool> SdCardMounted{false};
+  // Non-empty while a script is being executed by the interpreter. Used by the
+  // display to switch to a "running" feedback screen.
+  static inline StrideObservable<std::string> RunningProgramName{""};
 
   // Defaults
   static void Reset()

@@ -1,4 +1,5 @@
 #include "main_state.hpp"
+#include "running_state.hpp"
 #include "app_manager.hpp"
 #include "stride_locator.hpp"
 
@@ -32,6 +33,12 @@ void MainState::on_enter(Display &ctx)
                                                                 { _ip_dirty = true; });
   _file_subscription = Blackboard::FileListVersion.subscribe([this](int)
                                                              { _files_dirty = true; });
+  _running_subscription = Blackboard::RunningProgramName.subscribe([this](const std::string &name)
+                                                                   { if (!name.empty()) _running_dirty = true; });
+
+  // A program may have already started running between transitions.
+  if (!Blackboard::RunningProgramName.get().empty())
+    _running_dirty = true;
 
   // Cursor only changes from on_input(), which runs in the display task — safe to draw here.
   _cursor_subscription = _cursor_position.subscribe([this, &ctx](int)
@@ -58,10 +65,18 @@ void MainState::on_exit(Display &ctx)
   _wifi_subscription.unsubscribe();
   _mode_subscription.unsubscribe();
   _file_subscription.unsubscribe();
+  _running_subscription.unsubscribe();
 }
 
 void MainState::on_update(Display &ctx)
 {
+  if (_running_dirty)
+  {
+    _running_dirty = false;
+    Display::Instance().transition_to(std::make_unique<RunningState>());
+    return;
+  }
+
   if (_files_dirty || lgfx::millis() - _last_scan_ms > 2000)
   {
     _files_dirty = false;

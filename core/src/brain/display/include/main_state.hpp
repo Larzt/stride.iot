@@ -35,6 +35,7 @@ private:
 
   volatile bool _ip_dirty = false;
   volatile bool _files_dirty = false;
+  volatile bool _running_dirty = false;
   int _app_version = -1;
   uint32_t _last_anim_ms = 0;
   uint32_t _last_scan_ms = 0;
@@ -48,4 +49,5 @@ private:
   StrideSubscription _wifi_subscription;
   StrideSubscription _mode_subscription;
   StrideSubscription _file_subscription;
+  StrideSubscription _running_subscription;
 };

@@ -1,5 +1,7 @@
 #include "interpreter.hpp"
 
+#include <unistd.h>
+
 // ─────────────────────────────────────────────
 //  Helper: detecta si una línea es una asignación con expresión
 //  IDENTIFIER ASSIGN <expr...>
@@ -216,6 +218,8 @@ void Interpreter::executeLogfile(const std::vector<Token> &tokens)
 
   std::string path = Blackboard::MountPoint + filename;
 
+  bool created = (access(path.c_str(), F_OK) != 0);
+
   FILE *f = fopen(path.c_str(), "a");
   if (f == nullptr)
   {
@@ -225,6 +229,8 @@ void Interpreter::executeLogfile(const std::vector<Token> &tokens)
   fclose(f);
 
   Blackboard::CurrentLogFile = filename;
+  if (created)
+    Blackboard::FileListVersion = Blackboard::FileListVersion.get() + 1;
   StrideLogger::Log(StrideSubsystem::Interpreter, "Log file activo: %s", path.c_str());
 }
 

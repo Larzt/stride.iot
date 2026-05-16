@@ -16,6 +16,7 @@ enum class StateType {
   Startup,
   Main,
   View,
+  Running,
 };
 
 enum class InputType
