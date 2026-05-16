@@ -1,8 +1,8 @@
 site_name: STRIDE
 site_description: Firmware modular ESP32 — TFG STRIDE
-site_url: https://larzt.github.io/tfg-stride/
-repo_url: https://github.com/Larzt/tfg-stride
-repo_name: Larzt/tfg-stride
+site_url: https://larzt.github.io/stride.iot/
+repo_url: https://github.com/Larzt/stride.iot
+repo_name: Larzt/stride.iot
 edit_uri: edit/main/README.md
 
 docs_dir: docs
