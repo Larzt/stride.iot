@@ -64,11 +64,11 @@ private:
   size_t execute_control_loop(const StrideProgram &program, size_t index);
   size_t execute_control_if(const StrideProgram &program, size_t index);
 
-  void executeI2C(const std::vector<Token> &tokens);
-  void executeI2CInit(const std::vector<Token> &tokens);
-  void executeI2CWrite(const std::vector<Token> &tokens);
-  void executeI2CRead(const std::vector<Token> &tokens);
-  void executeI2CReadLE(const std::vector<Token> &tokens);
+  void execute_I2C_(const std::vector<Token> &tokens);
+  void execute_I2C_init(const std::vector<Token> &tokens);
+  void execute_I2C_write(const std::vector<Token> &tokens);
+  void execute_I2C_read(const std::vector<Token> &tokens);
+  void execute_I2C_readLE(const std::vector<Token> &tokens);
   i2c_master_dev_handle_t i2c_get_or_create_device(uint8_t addr, uint32_t speed_hz = 100000);
 
   void execute_sign16_command(const std::vector<Token> &tokens);

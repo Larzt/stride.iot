@@ -163,7 +163,7 @@ La pantalla es una **máquina de estados**. Cada estado implementa [DisplayBaseS
 
 1. **Lexer** — añade el `TokenType` en [core/plugin/lexer/include/lexer.hpp](core/plugin/lexer/include/lexer.hpp), su rama en `get_type()`, y la regla de tokenización en [lexer.cc](core/plugin/lexer/lexer.cc).
 2. **Intérprete** — declara `execute_mi_comando(const std::vector<Token>&)` en [interpreter.hpp](core/src/brain/interpreter/interpreter.hpp) e impleméntala en [interpreter.cc](core/src/brain/interpreter/interpreter.cc). Engánchala en el dispatch principal de `execute_simple_block_command` / `execute_range`.
-3. Si el comando habla con I2C, sigue el patrón de los helpers `executeI2C*` ya existentes.
+3. Si el comando habla con I2C, sigue el patrón de los helpers `execute_I2C_*` ya existentes.
 
 ### 6. Añadir configuración global
 

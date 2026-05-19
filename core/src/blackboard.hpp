@@ -35,7 +35,6 @@ struct Blackboard
 
   static inline int MaxSDRetries = 3;
   static inline int ReloadTimePressed = 1000;
-  static inline int ReconnectHoldMs = 3000;
   static inline std::string MountPoint = "/sdcard";
   static inline std::string CurrentLogFile = "/prints.log";
   static inline StrideObservable<AppDescriptor> CurrentProgram;

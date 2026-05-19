@@ -14,6 +14,7 @@ public:
   static AppManager &Instance();
 
   void scan();
+  void register_app(const AppDescriptor &app);
 
   const std::vector<AppDescriptor> &apps() const { return _apps; }
   int version() const { return _version; }
@@ -21,7 +22,11 @@ public:
 private:
   AppManager();
 
+  void rebuild_apps();
+
   std::vector<AppDescriptor> _apps;
+  std::vector<AppDescriptor> _builtins;
+  std::vector<AppDescriptor> _scripts;
   int _version = 0;
   StrideSubscription _file_subscription;
 };

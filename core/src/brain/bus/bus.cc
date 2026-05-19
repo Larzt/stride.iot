@@ -14,7 +14,7 @@ void spi_sd_init()
 
   if (ret == ESP_ERR_INVALID_STATE)
   {
-    ESP_LOGW("SPI_INIT", "SPI3 bus already initialized (ok)");
+    StrideLogger::Warning(StrideSubsystem::Card, "SPI3 bus already initialized (ok)");
   }
   else
   {

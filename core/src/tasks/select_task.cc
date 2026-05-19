@@ -32,6 +32,16 @@ void hear_program_selected_file_button_task(void *pvParameters)
           continue;
         }
       }
+      else if (app.type == AppType::Builtin)
+      {
+        StrideLogger::Log(StrideSubsystem::Interpreter, "Running builtin app: %s", app.name.c_str());
+        if (app.action)
+          app.action();
+
+        while (button.is_pressed())
+          vTaskDelay(pdMS_TO_TICKS(100));
+        continue;
+      }
       else
       {
         StrideLogger::Error(StrideSubsystem::Interpreter, "Loading selected program: %s has unknown type.", file.c_str());

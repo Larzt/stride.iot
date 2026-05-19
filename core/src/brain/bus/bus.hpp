@@ -2,7 +2,7 @@
 
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
-#include "esp_log.h"
+#include "stride_logger.hpp"
 
 #define SD_HOST    SPI3_HOST
 #define SD_MOSI    GPIO_NUM_23

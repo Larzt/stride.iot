@@ -1,7 +1,6 @@
 #include "timer.hpp"
 
 #include "esp_sntp.h"
-#include "esp_log.h"
 
 #include <time.h>
 
@@ -40,12 +39,12 @@ void TimeUtils::initialize()
 
   if (retries < max_retries)
   {
-    ESP_LOGI("TIME", "NTP sincronizado");
+    StrideLogger::Log(StrideSubsystem::Utils, "NTP sincronizado");
     _initialized = true;
   }
   else
   {
-    ESP_LOGE("TIME", "Error sincronizando NTP");
+    StrideLogger::Error(StrideSubsystem::Utils, "Error sincronizando NTP");
   }
 }
 

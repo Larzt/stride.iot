@@ -17,25 +17,27 @@ AppManager::AppManager()
 
 void AppManager::scan()
 {
+  std::vector<AppDescriptor> found;
+
   if (!Blackboard::SdCardMounted.get())
   {
-    if (!_apps.empty())
+    if (!_scripts.empty())
     {
-      _apps.clear();
+      _scripts.clear();
+      rebuild_apps();
       _version++;
-      StrideLogger::Log(StrideSubsystem::Card, "AppManager: list cleared (no SD card)");
+      StrideLogger::Log(StrideSubsystem::Card, "AppManager: scripts cleared (no SD card)");
     }
     return;
   }
 
-  std::vector<AppDescriptor> found;
-
   DIR *dir = opendir(Blackboard::MountPoint.c_str());
   if (!dir)
   {
-    if (!_apps.empty())
+    if (!_scripts.empty())
     {
-      _apps.clear();
+      _scripts.clear();
+      rebuild_apps();
       _version++;
     }
     return;
@@ -60,12 +62,12 @@ void AppManager::scan()
   }
   closedir(dir);
 
-  bool changed = (found.size() != _apps.size());
+  bool changed = (found.size() != _scripts.size());
   if (!changed)
   {
     for (size_t i = 0; i < found.size(); i++)
     {
-      if (found[i].name != _apps[i].name)
+      if (found[i].name != _scripts[i].name)
       {
         changed = true;
         break;
@@ -75,8 +77,31 @@ void AppManager::scan()
 
   if (changed)
   {
-    _apps = std::move(found);
+    _scripts = std::move(found);
+    rebuild_apps();
     _version++;
     StrideLogger::Log(StrideSubsystem::Card, "AppManager: %d apps (v%d)", (int)_apps.size(), _version);
   }
+}
+
+void AppManager::register_app(const AppDescriptor &app)
+{
+  for (const auto &existing : _builtins)
+  {
+    if (existing == app)
+      return;
+  }
+
+  _builtins.push_back(app);
+  rebuild_apps();
+  _version++;
+  StrideLogger::Log(StrideSubsystem::Card, "AppManager: registered '%s' (v%d)", app.name.c_str(), _version);
+}
+
+void AppManager::rebuild_apps()
+{
+  _apps.clear();
+  _apps.reserve(_builtins.size() + _scripts.size());
+  _apps.insert(_apps.end(), _builtins.begin(), _builtins.end());
+  _apps.insert(_apps.end(), _scripts.begin(), _scripts.end());
 }

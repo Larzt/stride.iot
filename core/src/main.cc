@@ -11,6 +11,18 @@
 #include "expander_task.hpp"
 #include "app_manager.hpp"
 
+void app_register(class Network &network)
+{
+    AppDescriptor reconnect_app;
+    reconnect_app.type = AppType::Builtin;
+    reconnect_app.name = "Reconnect WiFi";
+    reconnect_app.path = "builtin://reconnect";
+    reconnect_app.action = [&network]()
+    { network.reconnect(); };
+    AppManager::Instance().register_app(reconnect_app);
+}
+
+
 extern "C" void app_main(void)
 {
     AppManager::Instance();
@@ -25,6 +37,8 @@ extern "C" void app_main(void)
 
     class Network network;
     network.connect();
+
+    app_register(network);
 
     class Server server;
     server.start_server();

@@ -7,6 +7,10 @@ edit_uri: edit/main/README.md
 
 docs_dir: docs
 
+nav:
+  - Inicio: index.md
+  - Lenguaje DSL: dsl.md
+
 theme:
   name: material
   language: es

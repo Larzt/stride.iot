@@ -9,11 +9,11 @@
 
 void MainState::on_enter(Display &ctx)
 {
-  auto *am = StrideLocator::Get<AppManager>();
-  if (am)
+  auto *app_manager = StrideLocator::Get<AppManager>();
+  if (app_manager)
   {
-    _apps = am->apps();
-    _app_version = am->version();
+    _apps = app_manager->apps();
+    _app_version = app_manager->version();
   }
 
   auto &tft = ctx.getTFT();
@@ -245,14 +245,14 @@ void MainState::move_cursor_position(int delta)
 
 void MainState::reload_files(Display &ctx)
 {
-  auto *am = StrideLocator::Get<AppManager>();
-  if (!am) return;
+  auto *app_manager = StrideLocator::Get<AppManager>();
+  if (!app_manager) return;
 
-  int current_version = am->version();
+  int current_version = app_manager->version();
   if (current_version == _app_version) return;
   _app_version = current_version;
 
-  _apps = am->apps();
+  _apps = app_manager->apps();
 
   auto &tft = ctx.getTFT();
   tft.fillRect(0, LIST_Y, tft.width(), tft.height() - FOOTER_H - LIST_Y, TFT_BLACK);

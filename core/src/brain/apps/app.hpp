@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 #include "enums.hpp"
 
 struct AppDescriptor
@@ -8,6 +9,7 @@ struct AppDescriptor
   AppType type = AppType::Script;
   std::string name;
   std::string path;
+  std::function<void()> action;
 
   bool operator==(const AppDescriptor &other) const
   {
