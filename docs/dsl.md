@@ -198,6 +198,40 @@ i2c readle 0x76 0x88 2 -> cal_T1
 > [!NOTE]
 > En lecturas de 2 bytes, si el resultado supera 32767 se convierte automáticamente a entero con signo.
 
+### Expansor PCF8574 (pines lógicos)
+
+Para no tener que pensar en direcciones I2C ni en máscaras de bits cuando se trabaja con el módulo expansor PCF8574 (8 pines GPIO + `/INT`), el DSL permite **declarar alias** para cada uno de los 8 pines del expansor y usarlos directamente en `i2c write` / `i2c read`. La dirección del expansor está fijada en `0x27`.
+
+Declaración con `expin`:
+
+```text
+expin myLed = 0     # pin 0 del expansor -> alias myLed
+expin myBut = 1     # pin 1 del expansor -> alias myBut
+```
+
+Escritura de un pin (`HIGH` / `LOW`, también `on` / `off`):
+
+```text
+i2c write pin=myLed HIGH
+i2c write pin=myLed LOW
+i2c write pin=3     HIGH    # también admite el número del pin directamente (0–7)
+```
+
+Lectura de un pin (devuelve 0 ó 1):
+
+```text
+i2c read pin=myBut -> estado
+if estado == 1
+  print "Boton del expansor pulsado"
+endif
+```
+
+> [!NOTE]
+> El intérprete mantiene una *shadow copy* del byte del PCF8574: al escribir un pin sólo cambia el bit correspondiente sin afectar a los demás. Al leer un pin, ese bit se pone primero a `1` (entrada quasi-bidireccional) y luego se obtiene el estado real del chip.
+
+> [!TIP]
+> El pin `/INT` del expansor es una salida física del chip cableada a un GPIO del ESP32. Si la usas, declárala como un botón normal: `device = button name = intExp pin = <gpio>`.
+
 ## 9. Utilidades
 
 ### SIGN16
@@ -244,5 +278,6 @@ dloop
 | Comparación  | `==` `!=` `<` `<=` `>` `>=`                                            |
 | Aritmética   | `+` `-` `*` `/` `%`                                                    |
 | Bits         | `&` `|` `<<` `>>`                                                      |
-| I2C          | `i2c` `init` `write` `read` `readle`                                   |
+| I2C          | `i2c` `init` `write` `read` `readle` `pin`                             |
+| Expansor     | `expin` `high` `low`                                                   |
 | Utilidades   | `sign16`                                                               |

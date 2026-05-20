@@ -32,6 +32,7 @@ std::ostream &operator<<(std::ostream &out, TokenType type)
   case TokenType::READLE:        out << "READLE";        break;
   case TokenType::SDA:           out << "SDA";           break;
   case TokenType::SCL:           out << "SCL";           break;
+  case TokenType::EXPIN:         out << "EXPIN";         break;
   case TokenType::SIGN16:        out << "SIGN16";        break;
   case TokenType::STRING:        out << "STRING";        break;
   case TokenType::NUMBER:        out << "NUMBER";        break;

@@ -8,6 +8,7 @@
 
 #include "driver/i2c_master.h"
 #include "i2c_bus.hpp"
+#include "expander_task.hpp"
 
 #include "lexer.hpp"
 #include "sink.hpp"
@@ -71,10 +72,17 @@ private:
   void execute_I2C_readLE(const std::vector<Token> &tokens);
   i2c_master_dev_handle_t i2c_get_or_create_device(uint8_t addr, uint32_t speed_hz = 100000);
 
+  void execute_expin_declaration(const std::vector<Token> &tokens);
+  bool resolve_expander_pin(const Token &token, uint8_t &pin_out);
+  void execute_expander_pin_write(const std::vector<Token> &tokens);
+  void execute_expander_pin_read(const std::vector<Token> &tokens);
+
   void execute_sign16_command(const std::vector<Token> &tokens);
 
   std::map<uint8_t, i2c_master_dev_handle_t> _i2c_devices;
   bool _i2c_initialized = false;
+
+  std::map<std::string, uint8_t> _expander_pins;
 
   StrideVariable<int> _variables;
   StrideVariable<StrideLed *> _leds;

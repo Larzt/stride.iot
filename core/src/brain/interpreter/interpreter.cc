@@ -70,6 +70,10 @@ void Interpreter::execute(const StrideProgram &program)
       execute_I2C_(tokens);
       break;
 
+    case TokenType::EXPIN:
+      execute_expin_declaration(tokens);
+      break;
+
     case TokenType::SIGN16:
       execute_sign16_command(tokens);
       break;
@@ -135,6 +139,10 @@ void Interpreter::execute_simple_block_command(const std::vector<Token> &tokens)
 
   case TokenType::I2C:
     execute_I2C_(tokens);
+    break;
+
+  case TokenType::EXPIN:
+    execute_expin_declaration(tokens);
     break;
 
   case TokenType::SIGN16:

@@ -81,6 +81,15 @@ i2c_master_dev_handle_t Interpreter::i2c_get_or_create_device(uint8_t addr, uint
 
 void Interpreter::execute_I2C_write(const std::vector<Token> &tokens)
 {
+  for (size_t i = 1; i < tokens.size(); i++)
+  {
+    if (tokens[i].type == TokenType::PIN)
+    {
+      execute_expander_pin_write(tokens);
+      return;
+    }
+  }
+
   std::vector<int> values;
 
   for (size_t i = 1; i < tokens.size(); i++)
@@ -126,6 +135,15 @@ void Interpreter::execute_I2C_write(const std::vector<Token> &tokens)
 
 void Interpreter::execute_I2C_read(const std::vector<Token> &tokens)
 {
+  for (size_t i = 1; i < tokens.size(); i++)
+  {
+    if (tokens[i].type == TokenType::PIN)
+    {
+      execute_expander_pin_read(tokens);
+      return;
+    }
+  }
+
   std::vector<int> values;
   std::string varName = "";
 
@@ -262,6 +280,169 @@ void Interpreter::execute_I2C_readLE(const std::vector<Token> &tokens)
 
   StrideLogger::Log(StrideSubsystem::Interpreter, "I2C: READLE addr=0x%02X reg=0x%02X bytes=%d resultado=%d -> '%s'",
            addr, reg, bytes, result, varName.c_str());
+
+  if (!varName.empty())
+    _variables[varName] = result;
+}
+
+void Interpreter::execute_expin_declaration(const std::vector<Token> &tokens)
+{
+  if (tokens.size() < 4 ||
+      tokens[1].type != TokenType::IDENTIFIER ||
+      tokens[2].type != TokenType::ASSIGN ||
+      (tokens[3].type != TokenType::NUMBER && tokens[3].type != TokenType::HEX_NUMBER))
+  {
+    StrideLogger::Error(StrideSubsystem::Interpreter,
+                        "EXPIN: sintaxis invalida. Uso: EXPIN <nombre> = <pin 0-7>");
+    return;
+  }
+
+  int pin = parse_hex_number(tokens[3].value);
+  if (pin < 0 || pin > 7)
+  {
+    StrideLogger::Error(StrideSubsystem::Interpreter,
+                        "EXPIN: pin %d fuera de rango (0-7)", pin);
+    return;
+  }
+
+  const std::string &name = tokens[1].value;
+  _expander_pins[name] = (uint8_t)pin;
+  StrideLogger::Log(StrideSubsystem::Interpreter,
+                    "EXPIN: alias '%s' -> pin %d del expansor", name.c_str(), pin);
+}
+
+bool Interpreter::resolve_expander_pin(const Token &token, uint8_t &pin_out)
+{
+  if (token.type == TokenType::NUMBER || token.type == TokenType::HEX_NUMBER)
+  {
+    int p = parse_hex_number(token.value);
+    if (p < 0 || p > 7)
+      return false;
+    pin_out = (uint8_t)p;
+    return true;
+  }
+
+  if (token.type == TokenType::IDENTIFIER || token.type == TokenType::NAME)
+  {
+    auto it = _expander_pins.find(token.value);
+    if (it != _expander_pins.end())
+    {
+      pin_out = it->second;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void Interpreter::execute_expander_pin_write(const std::vector<Token> &tokens)
+{
+  uint8_t pin = 0;
+  bool pin_found = false;
+  int state = -1;
+
+  for (size_t i = 1; i < tokens.size(); i++)
+  {
+    if (tokens[i].type == TokenType::PIN &&
+        i + 2 < tokens.size() &&
+        tokens[i + 1].type == TokenType::ASSIGN)
+    {
+      if (!resolve_expander_pin(tokens[i + 2], pin))
+      {
+        StrideLogger::Error(StrideSubsystem::Interpreter,
+                            "I2C WRITE PIN: '%s' no es un alias EXPIN ni un pin 0-7",
+                            tokens[i + 2].value.c_str());
+        return;
+      }
+      pin_found = true;
+      i += 2;
+      continue;
+    }
+
+    if (tokens[i].type == TokenType::VALUE)
+    {
+      std::string v = tokens[i].value;
+      std::transform(v.begin(), v.end(), v.begin(), ::tolower);
+      state = (v == "high" || v == "on" || v == "1") ? 1 : 0;
+    }
+    else if (tokens[i].type == TokenType::NUMBER)
+    {
+      state = std::stoi(tokens[i].value) ? 1 : 0;
+    }
+    else if (tokens[i].type == TokenType::IDENTIFIER && _variables.count(tokens[i].value))
+    {
+      state = _variables[tokens[i].value] ? 1 : 0;
+    }
+  }
+
+  if (!pin_found || state < 0)
+  {
+    StrideLogger::Error(StrideSubsystem::Interpreter,
+                        "I2C WRITE PIN: sintaxis invalida. Uso: I2C WRITE PIN=<alias|0-7> <HIGH|LOW>");
+    return;
+  }
+
+  esp_err_t err = expander_pin_write(pin, state == 1);
+  if (err != ESP_OK)
+  {
+    StrideLogger::Error(StrideSubsystem::Interpreter,
+                        "I2C WRITE PIN: error escribiendo pin %d: %s", pin, esp_err_to_name(err));
+    return;
+  }
+
+  StrideLogger::Log(StrideSubsystem::Interpreter,
+                    "I2C WRITE PIN=%d -> %s", pin, state ? "HIGH" : "LOW");
+}
+
+void Interpreter::execute_expander_pin_read(const std::vector<Token> &tokens)
+{
+  uint8_t pin = 0;
+  bool pin_found = false;
+  std::string varName = "";
+
+  for (size_t i = 1; i < tokens.size(); i++)
+  {
+    if (tokens[i].type == TokenType::PIN &&
+        i + 2 < tokens.size() &&
+        tokens[i + 1].type == TokenType::ASSIGN)
+    {
+      if (!resolve_expander_pin(tokens[i + 2], pin))
+      {
+        StrideLogger::Error(StrideSubsystem::Interpreter,
+                            "I2C READ PIN: '%s' no es un alias EXPIN ni un pin 0-7",
+                            tokens[i + 2].value.c_str());
+        return;
+      }
+      pin_found = true;
+      i += 2;
+      continue;
+    }
+
+    if (tokens[i].type == TokenType::ARROW && i + 1 < tokens.size())
+    {
+      varName = tokens[i + 1].value;
+    }
+  }
+
+  if (!pin_found)
+  {
+    StrideLogger::Error(StrideSubsystem::Interpreter,
+                        "I2C READ PIN: sintaxis invalida. Uso: I2C READ PIN=<alias|0-7> [-> <var>]");
+    return;
+  }
+
+  bool level = false;
+  esp_err_t err = expander_pin_read(pin, level);
+  if (err != ESP_OK)
+  {
+    StrideLogger::Error(StrideSubsystem::Interpreter,
+                        "I2C READ PIN: error leyendo pin %d: %s", pin, esp_err_to_name(err));
+    return;
+  }
+
+  int result = level ? 1 : 0;
+  StrideLogger::Log(StrideSubsystem::Interpreter,
+                    "I2C READ PIN=%d -> %d (var='%s')", pin, result, varName.c_str());
 
   if (!varName.empty())
     _variables[varName] = result;

@@ -87,7 +87,7 @@ Toda la arquitectura se apoya en **cinco patrones** que conviene entender antes 
 - **[server/](core/src/brain/server/)** — Servidor HTTP. Mantiene la lista de `Handler`s y los registra en `httpd`. La función `load_handlers()` decide qué endpoints están activos según `Blackboard::CurrentServerMode` (Developer vs Production).
 - **[display/](core/src/brain/display/)** — Pantalla TFT (LovyanGFX) gestionada con una **máquina de estados** (`DisplayBaseState`: `Startup`, `Main`, `View`, `Running`). El singleton `Display::Instance()` posee el TFT y el estado activo; las transiciones se hacen con `Display::transition_to(...)`.
 - **[interpreter/](core/src/brain/interpreter/)** — Intérprete del DSL `.str`. Singleton que recorre los `Token`s del `lexer` y ejecuta comandos sobre el hardware (LEDs, botones, buzzer, I2C).
-- **[expander/](core/src/brain/expander/)** — Bus I2C maestro para los módulos expansores.
+- **[expander/](core/src/brain/expander/)** — Bus I2C maestro para los módulos expansores. La abstracción de pin lógico del expansor PCF8574 (`expin`, `i2c write pin=...`, `i2c read pin=...`) vive en [tasks/expander_task.cc](core/src/tasks/expander_task.cc) y en los helpers `execute_expander_pin_*` del intérprete.
 - **[bus/](core/src/brain/bus/)** — Constantes y `spi_sd_init()` para SD y TFT.
 - **[apps/](core/src/brain/apps/)** — `AppManager` escanea la SD y mantiene la lista de programas disponibles.
 
@@ -164,6 +164,7 @@ La pantalla es una **máquina de estados**. Cada estado implementa [DisplayBaseS
 1. **Lexer** — añade el `TokenType` en [core/plugin/lexer/include/lexer.hpp](core/plugin/lexer/include/lexer.hpp), su rama en `get_type()`, y la regla de tokenización en [lexer.cc](core/plugin/lexer/lexer.cc).
 2. **Intérprete** — declara `execute_mi_comando(const std::vector<Token>&)` en [interpreter.hpp](core/src/brain/interpreter/interpreter.hpp) e impleméntala en [interpreter.cc](core/src/brain/interpreter/interpreter.cc). Engánchala en el dispatch principal de `execute_simple_block_command` / `execute_range`.
 3. Si el comando habla con I2C, sigue el patrón de los helpers `execute_I2C_*` ya existentes.
+4. Si el comando opera sobre el **expansor PCF8574** a nivel de pin, usa las funciones `expander_pin_write` / `expander_pin_read` declaradas en [expander_task.hpp](core/src/tasks/include/expander_task.hpp) — mantienen una *shadow copy* del byte del chip para no pisar los demás pines al modificar uno. Los alias declarados con `expin` se guardan en `Interpreter::_expander_pins`.
 
 ### 6. Añadir configuración global
 

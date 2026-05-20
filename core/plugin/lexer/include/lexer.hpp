@@ -30,6 +30,7 @@ enum class TokenType
   READLE,
   SDA,
   SCL,
+  EXPIN,
 
   SIGN16,
 
@@ -117,6 +118,8 @@ struct Token
       return "SDA";
     case TokenType::SCL:
       return "SCL";
+    case TokenType::EXPIN:
+      return "EXPIN";
     case TokenType::SIGN16:
       return "SIGN16";
     case TokenType::STRING:

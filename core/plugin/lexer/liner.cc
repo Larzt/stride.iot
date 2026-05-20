@@ -28,12 +28,15 @@ static const std::unordered_map<std::string, TokenType> keywords = {
     {"readle", TokenType::READLE},
     {"sda", TokenType::SDA},
     {"scl", TokenType::SCL},
+    {"expin", TokenType::EXPIN},
     {"sign16", TokenType::SIGN16},
 
     {"->", TokenType::ARROW},
     {"=", TokenType::ASSIGN},
     {"on", TokenType::VALUE},
-    {"off", TokenType::VALUE}};
+    {"off", TokenType::VALUE},
+    {"high", TokenType::VALUE},
+    {"low", TokenType::VALUE}};
 
 Liner::Liner(const std::string &line) : source(line)
 {
