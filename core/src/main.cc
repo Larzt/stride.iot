@@ -1,6 +1,7 @@
 #include "stride_logger.hpp"
 #include "network.hpp"
 #include "server.hpp"
+#include "timer.hpp"
 
 #include "bus.hpp"
 #include "display.hpp"
@@ -20,12 +21,25 @@ void app_register(class Network &network)
     reconnect_app.action = [&network]()
     { network.reconnect(); };
     AppManager::Instance().register_app(reconnect_app);
+
+    AppDescriptor ping_app;
+    ping_app.type = AppType::Builtin;
+    ping_app.name = "Ping";
+    ping_app.path = "builtin://ping";
+    ping_app.action = []()
+    {
+        static StrideLed led(Blackboard::PingLed);
+        led.toggle();
+    };
+    AppManager::Instance().register_app(ping_app);
 }
 
 
 extern "C" void app_main(void)
 {
     AppManager::Instance();
+
+    TimeUtils::initialize();
 
     Display::Instance().begin();
 

@@ -11,6 +11,8 @@
 #include "librarie.hpp"
 #include "wifi.hpp"
 #include "settings.hpp"
+#include "run.hpp"
+#include "access_point.hpp"
 
 Server::Server() {}
 
@@ -87,10 +89,12 @@ void Server::load_handlers()
   this->add_handler(new Librarie());
   this->add_handler(new Ping());
   this->add_handler(new Settings());
+  this->add_handler(new Run());
   if (Blackboard::CurrentServerMode.get() == ServerMode::Developer)
   {
 
     this->add_handler(new Wifi());
+    this->add_handler(new AccessPoint());
 
   }
 }

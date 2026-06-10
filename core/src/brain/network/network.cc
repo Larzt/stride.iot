@@ -69,13 +69,22 @@ void Network::start_access_point()
 
   wifi_config_t ap_config = {};
 
-  std::string ssid = Blackboard::AccessSSID;
-  std::string pass = Blackboard::AccessPASS;
+  std::string ssid, pass;
+  if (load_ap_credentials(ssid, pass))
+  {
+    Blackboard::AccessSSID = ssid;
+    Blackboard::AccessPASS = pass;
+  }
+  else
+  {
+    ssid = Blackboard::AccessSSID;
+    pass = Blackboard::AccessPASS;
+  }
 
   strlcpy((char *)ap_config.ap.ssid, ssid.c_str(), sizeof(ap_config.ap.ssid));
   strlcpy((char *)ap_config.ap.password, pass.c_str(), sizeof(ap_config.ap.password));
 
-  ap_config.ap.authmode = WIFI_AUTH_WPA2_PSK;
+  ap_config.ap.authmode = pass.length() >= 8 ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
   ap_config.ap.max_connection = Blackboard::MaxNetConnections;
   ap_config.ap.channel = 1;
 
@@ -164,6 +173,75 @@ void Network::reconnect()
 
 }
 
+bool Network::load_ap_credentials(std::string &ssid, std::string &password)
+{
+  nvs_handle_t handle;
+  if (nvs_open("wifi", NVS_READONLY, &handle) != ESP_OK)
+    return false;
+
+  size_t ssid_len = 0, pass_len = 0;
+
+  if (nvs_get_str(handle, "ap_ssid", NULL, &ssid_len) != ESP_OK ||
+      nvs_get_str(handle, "ap_pass", NULL, &pass_len) != ESP_OK)
+  {
+    nvs_close(handle);
+    return false;
+  }
+
+  char *ssid_buf = new char[ssid_len];
+  char *pass_buf = new char[pass_len];
+
+  nvs_get_str(handle, "ap_ssid", ssid_buf, &ssid_len);
+  nvs_get_str(handle, "ap_pass", pass_buf, &pass_len);
+
+  ssid = ssid_buf;
+  password = pass_buf;
+
+  delete[] ssid_buf;
+  delete[] pass_buf;
+
+  nvs_close(handle);
+  return true;
+}
+
+void Network::save_ap_credentials(const std::string &ssid, const std::string &password)
+{
+  nvs_handle_t handle;
+  ESP_ERROR_CHECK(nvs_open("wifi", NVS_READWRITE, &handle));
+
+  ESP_ERROR_CHECK(nvs_set_str(handle, "ap_ssid", ssid.c_str()));
+  ESP_ERROR_CHECK(nvs_set_str(handle, "ap_pass", password.c_str()));
+
+  ESP_ERROR_CHECK(nvs_commit(handle));
+  nvs_close(handle);
+
+  Blackboard::AccessSSID = ssid;
+  Blackboard::AccessPASS = password;
+}
+
+void Network::apply_ap_credentials()
+{
+  if (Blackboard::CurrentNetworkMode.get() != NetworkMode::Access)
+    return;
+
+  wifi_config_t ap_config = {};
+  std::string ssid = Blackboard::AccessSSID;
+  std::string pass = Blackboard::AccessPASS;
+
+  strlcpy((char *)ap_config.ap.ssid, ssid.c_str(), sizeof(ap_config.ap.ssid));
+  strlcpy((char *)ap_config.ap.password, pass.c_str(), sizeof(ap_config.ap.password));
+
+  ap_config.ap.authmode = pass.length() >= 8 ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
+  ap_config.ap.max_connection = Blackboard::MaxNetConnections;
+  ap_config.ap.channel = 1;
+
+  esp_err_t err = esp_wifi_set_config(WIFI_IF_AP, &ap_config);
+  if (err != ESP_OK)
+  {
+    StrideLogger::Warning(StrideSubsystem::Network, "Could not apply AP credentials: 0x%x", err);
+  }
+}
+
 void Network::save_net_credentials(const std::string &ssid, const std::string &password)
 {
   nvs_handle_t handle;
@@ -218,8 +296,6 @@ void Network::event_handler(void *arg, esp_event_base_t event_base, int32_t even
     Blackboard::WifiIpAddress = ip_str;
 
     self->_led.on();
-
-    TimeUtils::initialize();
 
     StrideLogger::Log(StrideSubsystem::Network, "WiFi IP: %s", Blackboard::WifiIpAddress.get().c_str());
 

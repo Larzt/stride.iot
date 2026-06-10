@@ -163,6 +163,25 @@ body {
 /* ── EMPTY ── */
 .empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
 .empty-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+/* ── RUN BANNER ── */
+.run-banner {
+  display: flex; align-items: center; gap: 0.55rem;
+  background: #ecfdf5; color: #065f46;
+  border: 1px solid #a7f3d0; border-radius: var(--r);
+  padding: 0.55rem 0.85rem; margin-bottom: 1rem;
+  font-size: 0.82rem;
+}
+.run-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #16a34a; box-shadow: 0 0 0 0 rgba(22,163,74,0.55);
+  animation: run-pulse 1.2s ease-out infinite;
+  flex-shrink: 0;
+}
+@keyframes run-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(22,163,74,0.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(22,163,74,0); }
+  100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
+}
 /* ── TOAST ── */
 .toast {
   position: fixed; bottom: 1.25rem; right: 1.25rem;
@@ -283,6 +302,45 @@ function deleteFile(file) {
     .then(function(r){ if(!r.ok) throw new Error(); return r.text(); })
     .then(function(){ toast('Eliminado'); loadPage('/browser'); })
     .catch(function(){ toast('Error eliminando', true); });
+}
+function runFile(file) {
+  fetch('/run?file=' + encodeURIComponent(file), {method:'POST'})
+    .then(function(r){ if(!r.ok) throw new Error(); return r.text(); })
+    .then(function(){ toast('Ejecutando ' + file); refreshRunStatus(); })
+    .catch(function(){ toast('Error al ejecutar', true); });
+}
+var runStatusInFlight = false;
+function refreshRunStatus() {
+  if (runStatusInFlight) return;
+  var banner = document.getElementById('runStatus');
+  if (!banner) return;
+  runStatusInFlight = true;
+  fetch('/running', {cache: 'no-store'})
+    .then(function(r){ if(!r.ok) throw new Error(); return r.text(); })
+    .then(function(name){
+      var b = document.getElementById('runStatus');
+      var label = document.getElementById('runName');
+      if (!b || !label) return;
+      if (name && name.length > 0) {
+        label.textContent = name;
+        b.style.display = 'flex';
+      } else {
+        b.style.display = 'none';
+      }
+    })
+    .catch(function(){})
+    .finally(function(){ runStatusInFlight = false; });
+}
+var runStatusTimer = null;
+function startRunStatusPolling() {
+  if (runStatusTimer) { clearInterval(runStatusTimer); runStatusTimer = null; }
+  refreshRunStatus();
+  runStatusTimer = setInterval(function(){
+    if (!document.getElementById('runStatus')) {
+      clearInterval(runStatusTimer); runStatusTimer = null; return;
+    }
+    refreshRunStatus();
+  }, 6000);
 }
 window.onload = function(){ nav('browser'); };
 </script>

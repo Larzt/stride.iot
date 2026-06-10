@@ -1,8 +1,9 @@
 #include "timer.hpp"
 
-#include "esp_sntp.h"
+#include "esp_timer.h"
 
 #include <time.h>
+#include <sys/time.h>
 
 bool TimeUtils::_initialized = false;
 
@@ -14,38 +15,24 @@ void TimeUtils::initialize()
   setenv(Blackboard::TimeZone, "WET0WEST,M3.5.0/1,M10.5.0", 1);
   tzset();
 
-  esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
-
-  esp_sntp_setservername(0, "pool.ntp.org");
-  esp_sntp_setservername(1, "time.nist.gov");
-
-  esp_sntp_init();
-
-  time_t now = 0;
-  struct tm timeinfo = {};
-
-  int retries = 0;
-  const int max_retries = 15;
-
-  while (timeinfo.tm_year < (2024 - 1900) && retries < max_retries)
+  // Sin WiFi ni RTC externo el ESP32 no puede conocer la hora real al
+  // arrancar, así que sembramos el reloj con la fecha/hora de compilación
+  // (cuando se flasheó el firmware) como punto de partida aproximado.
+  struct tm tm = {};
+  if (strptime(__DATE__ " " __TIME__, "%b %d %Y %H:%M:%S", &tm) != nullptr)
   {
-    time(&now);
-    localtime_r(&now, &timeinfo);
+    tm.tm_isdst = -1;
+    struct timeval tv = {.tv_sec = mktime(&tm), .tv_usec = 0};
+    settimeofday(&tv, nullptr);
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
-    retries++;
-  }
-
-  if (retries < max_retries)
-  {
-    StrideLogger::Log(StrideSubsystem::Utils, "NTP sincronizado");
-    _initialized = true;
+    StrideLogger::Log(StrideSubsystem::Utils, "Reloj sembrado con hora de compilación");
   }
   else
   {
-    StrideLogger::Error(StrideSubsystem::Utils, "Error sincronizando NTP");
+    StrideLogger::Error(StrideSubsystem::Utils, "No se pudo sembrar el reloj");
   }
+
+  _initialized = true;
 }
 
 std::string TimeUtils::get_timestamp()
@@ -56,13 +43,30 @@ std::string TimeUtils::get_timestamp()
   time(&now);
   localtime_r(&now, &timeinfo);
 
-  char buffer[32];
-
+  char date_buffer[32];
   strftime(
+      date_buffer,
+      sizeof(date_buffer),
+      "%d/%m/%Y - %H:%M:%S",
+      &timeinfo);
+
+  // El reloj de pared vuelve a la hora de compilación en cada arranque en
+  // frío, así que añadimos el tiempo de actividad (monótono) para poder
+  // ordenar y medir eventos aunque la fecha se haya reiniciado.
+  int64_t uptime_s = esp_timer_get_time() / 1000000;
+  int hours = uptime_s / 3600;
+  int minutes = (uptime_s % 3600) / 60;
+  int seconds = uptime_s % 60;
+
+  char buffer[64];
+  snprintf(
       buffer,
       sizeof(buffer),
-      "%d/%m/%Y - %H:%M",
-      &timeinfo);
+      "%s [+%02d:%02d:%02d]",
+      date_buffer,
+      hours,
+      minutes,
+      seconds);
 
   return std::string(buffer);
 }

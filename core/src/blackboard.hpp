@@ -24,7 +24,7 @@ struct Blackboard
 
   static uint16_t inline Port = 80;
   static uint16_t inline HeaderLength = 1024;
-  static uint16_t inline MaxHandlers = 12;
+  static uint16_t inline MaxHandlers = 16;
   static inline gpio_num_t ModeLed = GPIO_NUM_27;
   static inline int ModeTimePressed = 5000;
   static inline StrideObservable<ServerMode> CurrentServerMode{ServerMode::Developer};

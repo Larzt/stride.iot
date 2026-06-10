@@ -47,6 +47,10 @@ esp_err_t Browser::handler(httpd_req_t *req)
   }
 
   html += "<div class=\"card\">";
+  html += "<div id=\"runStatus\" class=\"run-banner\" style=\"display:none;\">";
+  html += "<span class=\"run-dot\"></span>";
+  html += "<span>Ejecutando: <strong id=\"runName\"></strong></span>";
+  html += "</div>";
   html += "<div class=\"page-hdr\">";
   html += "<div>";
   html += "<h2 style=\"font-size:1rem;font-weight:600;\">Archivos SD</h2>";
@@ -88,9 +92,15 @@ esp_err_t Browser::handler(httpd_req_t *req)
 
     hasFiles = true;
 
+    bool isStr = (ext == ".str" || ext == ".STR");
+
     html += "<tr>";
     html += "<td><span class=\"fname\">&#128196; " + fileName + "</span></td>";
     html += "<td><div class=\"actions\">";
+    if (isStr)
+    {
+      html += "<button class=\"btn-icon\" title=\"Ejecutar\" onclick=\"runFile('" + fileName + "')\" style=\"color:#16a34a\">&#9654;</button>";
+    }
     html += "<button class=\"btn-icon\" title=\"Editar\" onclick=\"editFile('" + fileName + "')\">&#9998;</button>";
     html += "<button class=\"btn-icon\" title=\"Ver\" onclick=\"viewFile('" + fileName + "')\">&#128065;</button>";
     html += "<button class=\"btn-icon\" title=\"Eliminar\" onclick=\"deleteFile('" + fileName + "')\" style=\"color:#ef4444\">&#128465;</button>";
@@ -109,6 +119,8 @@ esp_err_t Browser::handler(httpd_req_t *req)
   }
 
   html += "</tbody></table></div>";
+
+  html += "<script>if (typeof startRunStatusPolling === 'function') startRunStatusPolling();</script>";
 
   httpd_resp_set_type(req, "text/html");
   httpd_resp_send(req, html.c_str(), html.length());

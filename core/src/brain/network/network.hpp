@@ -22,6 +22,10 @@ public:
   static bool load_net_credentials(std::string &ssid, std::string &pass);
   static void save_net_credentials(const std::string &ssid, const std::string &pass);
 
+  static bool load_ap_credentials(std::string &ssid, std::string &pass);
+  static void save_ap_credentials(const std::string &ssid, const std::string &pass);
+  void apply_ap_credentials();
+
 private:
   StrideLed _led;
   static int _current_station_retries;

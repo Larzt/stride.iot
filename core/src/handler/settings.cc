@@ -88,14 +88,18 @@ esp_err_t Settings::handler(httpd_req_t *req)
   {
     html +=
         "<div style='margin-top:1.25rem;padding:.75rem 1rem;"
-        "background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r);"
-        "display:flex;align-items:center;justify-content:space-between;gap:1rem;'>"
-        "<p style='margin:0;font-size:.8rem;color:#1e40af;'>"
-        "Modo desarrollo activo. Puedes configurar la red Wi-Fi."
+        "background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r);'>"
+        "<p style='margin:0 0 .75rem;font-size:.8rem;color:#1e40af;'>"
+        "Modo desarrollo activo. Puedes configurar las redes Wi-Fi."
         "</p>"
+        "<div style='display:flex;flex-wrap:wrap;gap:.5rem;justify-content:flex-end;'>"
+        "<button class='btn' style='white-space:nowrap;' onclick=\"loadPage('/ap')\">"
+        "Configurar punto de acceso"
+        "</button>"
         "<button class='btn btn-primary' style='white-space:nowrap;' onclick=\"loadPage('/wifi')\">"
         "Configurar Wi-Fi"
         "</button>"
+        "</div>"
         "</div>";
   }
 
