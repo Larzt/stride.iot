@@ -1,0 +1,8 @@
+Tareas para el TFG:
+
+Permitir en el PRINT leer el estado del LED: print "My led status: " myLed
+Cambiar sintaxis del PRINT para poder hacer "Mi led ${myled} status."
+
+NO funciona la asignacion de FILE <myLogFile>
+
+Terminar todos los tests
