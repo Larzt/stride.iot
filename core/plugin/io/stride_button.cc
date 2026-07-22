@@ -33,6 +33,24 @@ bool StrideButton::just_pressed()
   return false;
 }
 
+bool StrideButton::just_released()
+{
+  bool current_state = read_debounced();
+
+  if (!current_state && _release_armed)
+  {
+    _release_armed = false;
+    return true;
+  }
+
+  if (current_state)
+  {
+    _release_armed = true;
+  }
+
+  return false;
+}
+
 bool StrideButton::is_pressed()
 {
   return read_debounced();

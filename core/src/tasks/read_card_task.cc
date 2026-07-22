@@ -1,18 +1,37 @@
 #include "card_task.hpp"
 
-#include "lexer.hpp"
+#include "lang_parser.hpp"
 
 #include "interpreter.hpp"
 #include "types.hpp"
 #include "app.hpp"
+#include "sink.hpp"
+#include "timer.hpp"
 
-#include <vector>
+#include <string>
+
+// Reports every parse error to the logger and to the active log file, so the
+// user can read them from the web (/view) or the TFT.
+static void report_parse_errors(const std::vector<lang::ParseError> &errors)
+{
+  std::string log_path = Blackboard::MountPoint + Blackboard::CurrentLogFile;
+  std::string timestamp = TimeUtils::get_timestamp();
+
+  sink_file(log_path, "[" + timestamp + "]: El programa tiene errores y no se ejecuto:\n");
+
+  for (const auto &error : errors)
+  {
+    StrideLogger::Error(StrideSubsystem::Interpreter, "Linea %u: %s",
+                        (unsigned)error.line, error.message.c_str());
+    sink_file(log_path, "  - Linea " + std::to_string(error.line) + ": " +
+                            error.message + "\n");
+  }
+}
 
 TaskHandle_t sdReadTaskHandle = NULL;
 void read_card_task(void *pvParameters)
 {
   auto &interpreter = Interpreter::Instance();
-  StrideProgram program;
 
   while (true)
   {
@@ -34,30 +53,34 @@ void read_card_task(void *pvParameters)
     }
 
     StrideLogger::Log(StrideSubsystem::Card, "Loading program file: %s", current_program.c_str());
-    program.clear();
 
-    char line[128];
-    while (fgets(line, sizeof(line), f))
-    {
-      std::string s_line(line);
-      s_line.erase(s_line.find_last_not_of("\n\r\t ") + 1);
-
-      if (s_line.empty())
-        continue;
-
-      auto tokens = tokenize(s_line);
-      if (!tokens.empty())
-      {
-        program.push_back(tokens);
-      }
-    }
+    // Whole-file read: the parser needs the complete source (and the old
+    // 128-char line buffer silently truncated long lines).
+    std::string source;
+    char chunk[256];
+    size_t bytes_read;
+    while ((bytes_read = fread(chunk, 1, sizeof(chunk), f)) > 0)
+      source.append(chunk, bytes_read);
 
     fclose(f);
 
-    StrideLogger::Log(StrideSubsystem::Card, "Program loadded succesfully (%d lines)", program.size());
+    lang::ParseResult result = lang::parse(source);
+
+    if (!result.ok())
+    {
+      StrideLogger::Error(StrideSubsystem::Card,
+                          "Program '%s' has %u error(s), not running",
+                          app.name.c_str(), (unsigned)result.errors.size());
+      report_parse_errors(result.errors);
+      continue;
+    }
+
+    StrideLogger::Log(StrideSubsystem::Card,
+                      "Program parsed successfully (%u statements)",
+                      (unsigned)result.program.top.size());
 
     Blackboard::RunningProgramName = app.name;
-    interpreter.execute(program);
+    interpreter.execute(result.program);
     Blackboard::RunningProgramName = std::string("");
   }
 }

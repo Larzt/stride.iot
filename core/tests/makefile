@@ -1,9 +1,9 @@
 CXX = g++
-CXXFLAGS = -Wall -Wextra -std=c++2b -I../plugin/lexer/include -Iinclude -g
+CXXFLAGS = -Wall -Wextra -std=c++2b -I../plugin/lang/include -Iinclude -g
 
 TARGET = run_tests
 
-SRCS_LANG = $(wildcard ../plugin/lexer/*.cc)
+SRCS_LANG = $(wildcard ../plugin/lang/*.cc)
 SRCS_TESTS = $(wildcard *.cc)
 SRCS = $(SRCS_LANG) $(SRCS_TESTS)
 

@@ -15,6 +15,7 @@ public:
 
   void start() override;
   bool just_pressed();
+  bool just_released();
   bool is_pressed();
   bool wait_for_long_press(uint32_t ms);
 
@@ -25,6 +26,7 @@ private:
 private:
   bool _pull_up = true;
   bool _was_pressed = false;
+  bool _release_armed = false;
   bool _is_pressing = false;
   bool _last_state = false;
   bool _last_reading = false;

@@ -3,6 +3,8 @@
 #include <fstream>
 #include <cstring>
 
+#include "lang_parser.hpp"
+
 Save::Save()
 {
   _save_uri = {
@@ -47,6 +49,8 @@ esp_err_t Save::handler(httpd_req_t *req)
 
   int remaining = req->content_len;
   char buffer[512];
+  std::string content;
+  content.reserve(remaining > 0 ? remaining : 0);
 
   while (remaining > 0)
   {
@@ -63,11 +67,33 @@ esp_err_t Save::handler(httpd_req_t *req)
     }
 
     fwrite(buffer, 1, received, f);
+    content.append(buffer, received);
     remaining -= received;
   }
 
   fclose(f);
   httpd_resp_set_type(req, "text/plain");
+
+  // The file is always saved (never lose the user's work), but .str scripts
+  // are validated so the editor can show the errors right away.
+  std::string filename(file);
+  bool is_script = filename.size() >= 4 &&
+                   filename.compare(filename.size() - 4, 4, ".str") == 0;
+
+  if (is_script)
+  {
+    lang::ParseResult result = lang::parse(content);
+    if (!result.ok())
+    {
+      std::string response = "OK_WITH_ERRORS";
+      for (const auto &error : result.errors)
+        response += "\nLinea " + std::to_string(error.line) + ": " +
+                    error.message;
+      httpd_resp_sendstr(req, response.c_str());
+      return ESP_OK;
+    }
+  }
+
   httpd_resp_sendstr(req, "OK");
 
   return ESP_OK;

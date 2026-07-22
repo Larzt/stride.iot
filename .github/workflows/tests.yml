@@ -1,4 +1,4 @@
-name: Lexer Tests
+name: Language Tests
 
 on:
   push:

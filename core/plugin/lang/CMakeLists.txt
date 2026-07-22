@@ -1,5 +1,5 @@
 idf_component_register(
     SRCS "lexer.cc"
-         "liner.cc"
+         "parser.cc"
     INCLUDE_DIRS "include"
 )

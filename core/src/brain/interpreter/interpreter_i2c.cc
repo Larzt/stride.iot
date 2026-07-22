@@ -1,64 +1,32 @@
 #include "interpreter.hpp"
 
-void Interpreter::execute_I2C_(const std::vector<Token> &tokens)
-{
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
-  if (tokens.size() < 2)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: Comando I2C incompleto");
-    return;
-  }
-
-  switch (tokens[1].type)
-  {
-  case TokenType::INIT:
-    execute_I2C_init(tokens);
-    break;
-  case TokenType::WRITE:
-    execute_I2C_write(tokens);
-    break;
-  case TokenType::READ:
-    execute_I2C_read(tokens);
-    break;
-  case TokenType::READLE:
-    execute_I2C_readLE(tokens);
-    break;
-  default:
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: Subcomando desconocido: %s", tokens[1].value.c_str());
-  }
-}
-
-void Interpreter::execute_I2C_init(const std::vector<Token> &tokens)
+// The bus auto-initializes on the first i2c statement (the old explicit
+// `i2c init` no longer exists in the language).
+bool Interpreter::i2c_ensure_initialized(uint16_t line)
 {
   if (_i2c_initialized)
-  {
-    StrideLogger::Warning(StrideSubsystem::Interpreter, "I2C: Bus ya inicializado, ignorando INIT");
-    return;
-  }
+    return true;
 
   if (i2c_get_bus() == nullptr)
   {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: Bus I2C no disponible. Asegurate de llamar a i2c_master_init() en el arranque");
-    return;
+    runtime_error(line, "el bus I2C no esta disponible en este dispositivo");
+    return false;
   }
 
   _i2c_initialized = true;
-  StrideLogger::Log(StrideSubsystem::Interpreter, "I2C: Bus I2C adquirido correctamente");
+  StrideLogger::Log(StrideSubsystem::Interpreter, "I2C: bus adquirido");
+  return true;
 }
 
-i2c_master_dev_handle_t Interpreter::i2c_get_or_create_device(uint8_t addr, uint32_t speed_hz)
+i2c_master_dev_handle_t Interpreter::i2c_get_or_create_device(uint8_t addr,
+                                                              uint32_t speed_hz)
 {
   auto it = _i2c_devices.find(addr);
   if (it != _i2c_devices.end())
-  {
     return it->second;
-  }
-
-  if (!_i2c_initialized)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: Bus no inicializado. Llama a I2C INIT primero");
-    return nullptr;
-  }
 
   i2c_device_config_t cfg = {};
   cfg.dev_addr_length = I2C_ADDR_BIT_LEN_7;
@@ -70,380 +38,136 @@ i2c_master_dev_handle_t Interpreter::i2c_get_or_create_device(uint8_t addr, uint
 
   if (err != ESP_OK)
   {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: Error añadiendo dispositivo 0x%02X: %s", addr, esp_err_to_name(err));
+    StrideLogger::Error(StrideSubsystem::Interpreter,
+                        "I2C: error registrando dispositivo 0x%02X: %s", addr,
+                        esp_err_to_name(err));
     return nullptr;
   }
 
   _i2c_devices[addr] = handle;
-  StrideLogger::Log(StrideSubsystem::Interpreter, "I2C: Dispositivo 0x%02X registrado", addr);
+  StrideLogger::Log(StrideSubsystem::Interpreter,
+                    "I2C: dispositivo 0x%02X registrado", addr);
   return handle;
 }
 
-void Interpreter::execute_I2C_write(const std::vector<Token> &tokens)
+// args = [addr, (reg), value]; flags bit1 = has register.
+void Interpreter::exec_i2c_write(const lang::Stmt &stmt)
 {
-  for (size_t i = 1; i < tokens.size(); i++)
-  {
-    if (tokens[i].type == TokenType::PIN)
-    {
-      execute_expander_pin_write(tokens);
-      return;
-    }
-  }
+  if (!i2c_ensure_initialized(stmt.line))
+    return;
 
-  std::vector<int> values;
+  bool has_register = (stmt.flags & 2) != 0;
+  size_t expected_args = has_register ? 3 : 2;
+  if (stmt.args.size() < expected_args)
+    return; // parse errors already reported
 
-  for (size_t i = 1; i < tokens.size(); i++)
+  int32_t addr = eval(stmt.args[0].get());
+  if (addr < 0 || addr > 0x7F)
   {
-    if (tokens[i].type == TokenType::HEX_NUMBER || tokens[i].type == TokenType::NUMBER)
-    {
-      values.push_back(parse_hex_number(tokens[i].value));
-    }
-  }
-
-  if (values.size() < 2)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: WRITE: sintaxis invalida. Uso: I2C WRITE <addr> <data> [<reg>]");
+    runtime_error(stmt.line, "direccion I2C fuera de rango (0x00-0x7F)");
     return;
   }
 
-  i2c_master_dev_handle_t dev = i2c_get_or_create_device((uint8_t)values[0]);
+  i2c_master_dev_handle_t dev = i2c_get_or_create_device((uint8_t)addr);
   if (!dev)
     return;
 
   esp_err_t err;
 
-  if (values.size() == 2)
+  if (has_register)
   {
-
-    uint8_t buf[1] = {(uint8_t)values[1]};
-    err = i2c_master_transmit(dev, buf, 1, pdMS_TO_TICKS(100));
-    StrideLogger::Log(StrideSubsystem::Interpreter, "I2C: WRITE addr=0x%02X data=0x%02X", values[0], values[1]);
+    uint8_t reg = (uint8_t)eval(stmt.args[1].get());
+    uint8_t data = (uint8_t)eval(stmt.args[2].get());
+    uint8_t buf[2] = {reg, data};
+    err = i2c_master_transmit(dev, buf, 2, pdMS_TO_TICKS(100));
+    StrideLogger::Log(StrideSubsystem::Interpreter,
+                      "I2C write addr=0x%02X reg=0x%02X data=0x%02X",
+                      (unsigned)addr, reg, data);
   }
   else
   {
-
-    uint8_t buf[2] = {(uint8_t)values[1], (uint8_t)values[2]};
-    err = i2c_master_transmit(dev, buf, 2, pdMS_TO_TICKS(100));
-    StrideLogger::Log(StrideSubsystem::Interpreter, "I2C: WRITE addr=0x%02X reg=0x%02X data=0x%02X", values[0], values[1], values[2]);
+    uint8_t data = (uint8_t)eval(stmt.args[1].get());
+    uint8_t buf[1] = {data};
+    err = i2c_master_transmit(dev, buf, 1, pdMS_TO_TICKS(100));
+    StrideLogger::Log(StrideSubsystem::Interpreter,
+                      "I2C write addr=0x%02X data=0x%02X", (unsigned)addr,
+                      data);
   }
 
   if (err != ESP_OK)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: WRITE error: %s", esp_err_to_name(err));
-  }
+    runtime_error(stmt.line, "error escribiendo por I2C: " +
+                                 std::string(esp_err_to_name(err)));
 }
 
-void Interpreter::execute_I2C_read(const std::vector<Token> &tokens)
+// args = [addr, (reg), size]; name = destination variable;
+// flags bit0 = little endian, bit1 = has register.
+void Interpreter::exec_i2c_read(const lang::Stmt &stmt)
 {
-  for (size_t i = 1; i < tokens.size(); i++)
-  {
-    if (tokens[i].type == TokenType::PIN)
-    {
-      execute_expander_pin_read(tokens);
-      return;
-    }
-  }
+  if (!i2c_ensure_initialized(stmt.line))
+    return;
 
-  std::vector<int> values;
-  std::string varName = "";
+  bool has_register = (stmt.flags & 2) != 0;
+  bool little_endian = (stmt.flags & 1) != 0;
+  size_t expected_args = has_register ? 3 : 2;
+  if (stmt.args.size() < expected_args || stmt.name.empty())
+    return; // parse errors already reported
 
-  for (size_t i = 1; i < tokens.size(); i++)
+  int32_t addr = eval(stmt.args[0].get());
+  if (addr < 0 || addr > 0x7F)
   {
-    if (tokens[i].type == TokenType::ARROW && i + 1 < tokens.size())
-    {
-      varName = tokens[i + 1].value;
-      continue;
-    }
-    if (tokens[i].type == TokenType::HEX_NUMBER || tokens[i].type == TokenType::NUMBER)
-    {
-      values.push_back(parse_hex_number(tokens[i].value));
-    }
-  }
-
-  if (values.size() < 2)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: READ: sintaxis invalida");
+    runtime_error(stmt.line, "direccion I2C fuera de rango (0x00-0x7F)");
     return;
   }
 
-  uint8_t addr = (uint8_t)values[0];
-  uint8_t reg = (values.size() >= 3) ? (uint8_t)values[1] : 0xFF;
-  int bytes = (values.size() >= 3) ? values[2] : values[1];
-  bool has_reg = (values.size() >= 3);
-  (void)has_reg;
+  uint8_t reg = has_register ? (uint8_t)eval(stmt.args[1].get()) : 0xFF;
+  int32_t bytes = eval(stmt.args[has_register ? 2 : 1].get());
 
-  if (bytes < 1 || bytes > 32)
+  int32_t max_bytes = little_endian ? 4 : 32;
+  if (bytes < 1 || bytes > max_bytes)
   {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: READ: bytes invalido (%d)", bytes);
+    runtime_error(stmt.line, "tamano de lectura invalido (" +
+                                 std::to_string(bytes) + "), rango 1-" +
+                                 std::to_string(max_bytes));
     return;
   }
-  StrideLogger::Log(StrideSubsystem::Interpreter, "I2C READ: addr=0x%02X reg=0x%02X bytes=%d var='%s'",
-           addr, reg, bytes, varName.c_str());
 
   i2c_master_dev_handle_t dev = i2c_get_or_create_device((uint8_t)addr);
-  if (!dev)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C READ: No se pudo obtener device handle");
-    return;
-  }
-
-  uint8_t reg_buf = (uint8_t)reg;
-  uint8_t rx_buf[32] = {};
-
-  esp_err_t err = i2c_master_transmit_receive(
-      dev,
-      &reg_buf, 1,
-      rx_buf, (size_t)bytes,
-      pdMS_TO_TICKS(100)
-  );
-
-  if (err != ESP_OK)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C READ: transmit_receive falló: %s", esp_err_to_name(err));
-    return;
-  }
-
-  StrideLogger::Log(StrideSubsystem::Interpreter, "I2C READ: rx_buf[0]=0x%02X rx_buf[1]=0x%02X", rx_buf[0], rx_buf[1]);
-
-  int result = 0;
-  int combine = bytes > 4 ? 4 : bytes;
-  for (int i = 0; i < combine; i++)
-  {
-    result = (result << 8) | rx_buf[i];
-  }
-
-  if (bytes == 2 && result > 32767)
-  {
-    result -= 65536;
-  }
-
-  StrideLogger::Log(StrideSubsystem::Interpreter, "I2C READ: resultado=%d -> guardando en '%s'", result, varName.c_str());
-
-  if (!varName.empty())
-  {
-    _variables[varName] = result;
-  }
-}
-
-void Interpreter::execute_I2C_readLE(const std::vector<Token> &tokens)
-{
-  std::vector<int> values;
-  std::string varName = "";
-
-  for (size_t i = 1; i < tokens.size(); i++)
-  {
-    if (tokens[i].type == TokenType::ARROW && i + 1 < tokens.size())
-    {
-      varName = tokens[i + 1].value;
-      continue;
-    }
-    if (tokens[i].type == TokenType::HEX_NUMBER || tokens[i].type == TokenType::NUMBER)
-      values.push_back(parse_hex_number(tokens[i].value));
-  }
-
-  if (values.size() < 3)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: READLE: sintaxis invalida. Uso: I2C READLE <addr> <reg> <bytes> -> <var>");
-    return;
-  }
-
-  uint8_t addr = (uint8_t)values[0];
-  uint8_t reg = (uint8_t)values[1];
-  int bytes = values[2];
-
-  if (bytes < 1 || bytes > 4)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: READLE: bytes invalido (%d), rango 1-4", bytes);
-    return;
-  }
-
-  i2c_master_dev_handle_t dev = i2c_get_or_create_device(addr);
   if (!dev)
     return;
 
   uint8_t reg_buf = reg;
-  uint8_t rx_buf[4] = {};
+  uint8_t rx_buf[32] = {};
 
-  esp_err_t err = i2c_master_transmit_receive(dev, &reg_buf, 1, rx_buf, (size_t)bytes, pdMS_TO_TICKS(100));
+  esp_err_t err = i2c_master_transmit_receive(dev, &reg_buf, 1, rx_buf,
+                                              (size_t)bytes,
+                                              pdMS_TO_TICKS(100));
   if (err != ESP_OK)
   {
-    StrideLogger::Error(StrideSubsystem::Interpreter, "I2C: READLE: transmit_receive falló: %s", esp_err_to_name(err));
+    runtime_error(stmt.line, "error leyendo por I2C: " +
+                                 std::string(esp_err_to_name(err)));
     return;
   }
 
-  int result = 0;
-  for (int i = bytes - 1; i >= 0; i--)
-    result = (result << 8) | rx_buf[i];
+  // Combine up to the first 4 bytes into one integer. Anything wider is
+  // still read from the device but only the first 4 bytes form the value.
+  int32_t result = 0;
+  int32_t combine = bytes > 4 ? 4 : bytes;
 
-  if (bytes == 2 && result > 32767)
-    result -= 65536;
-
-  StrideLogger::Log(StrideSubsystem::Interpreter, "I2C: READLE addr=0x%02X reg=0x%02X bytes=%d resultado=%d -> '%s'",
-           addr, reg, bytes, result, varName.c_str());
-
-  if (!varName.empty())
-    _variables[varName] = result;
-}
-
-void Interpreter::execute_expin_declaration(const std::vector<Token> &tokens)
-{
-  if (tokens.size() < 4 ||
-      tokens[1].type != TokenType::IDENTIFIER ||
-      tokens[2].type != TokenType::ASSIGN ||
-      (tokens[3].type != TokenType::NUMBER && tokens[3].type != TokenType::HEX_NUMBER))
+  if (little_endian)
   {
-    StrideLogger::Error(StrideSubsystem::Interpreter,
-                        "EXPIN: sintaxis invalida. Uso: EXPIN <nombre> = <pin 0-7>");
-    return;
+    for (int32_t i = combine - 1; i >= 0; i--)
+      result = (result << 8) | rx_buf[i];
   }
-
-  int pin = parse_hex_number(tokens[3].value);
-  if (pin < 0 || pin > 7)
+  else
   {
-    StrideLogger::Error(StrideSubsystem::Interpreter,
-                        "EXPIN: pin %d fuera de rango (0-7)", pin);
-    return;
-  }
-
-  const std::string &name = tokens[1].value;
-  _expander_pins[name] = (uint8_t)pin;
-  StrideLogger::Log(StrideSubsystem::Interpreter,
-                    "EXPIN: alias '%s' -> pin %d del expansor", name.c_str(), pin);
-}
-
-bool Interpreter::resolve_expander_pin(const Token &token, uint8_t &pin_out)
-{
-  if (token.type == TokenType::NUMBER || token.type == TokenType::HEX_NUMBER)
-  {
-    int p = parse_hex_number(token.value);
-    if (p < 0 || p > 7)
-      return false;
-    pin_out = (uint8_t)p;
-    return true;
-  }
-
-  if (token.type == TokenType::IDENTIFIER || token.type == TokenType::NAME)
-  {
-    auto it = _expander_pins.find(token.value);
-    if (it != _expander_pins.end())
-    {
-      pin_out = it->second;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-void Interpreter::execute_expander_pin_write(const std::vector<Token> &tokens)
-{
-  uint8_t pin = 0;
-  bool pin_found = false;
-  int state = -1;
-
-  for (size_t i = 1; i < tokens.size(); i++)
-  {
-    if (tokens[i].type == TokenType::PIN &&
-        i + 2 < tokens.size() &&
-        tokens[i + 1].type == TokenType::ASSIGN)
-    {
-      if (!resolve_expander_pin(tokens[i + 2], pin))
-      {
-        StrideLogger::Error(StrideSubsystem::Interpreter,
-                            "I2C WRITE PIN: '%s' no es un alias EXPIN ni un pin 0-7",
-                            tokens[i + 2].value.c_str());
-        return;
-      }
-      pin_found = true;
-      i += 2;
-      continue;
-    }
-
-    if (tokens[i].type == TokenType::VALUE)
-    {
-      std::string v = tokens[i].value;
-      std::transform(v.begin(), v.end(), v.begin(), ::tolower);
-      state = (v == "high" || v == "on" || v == "1") ? 1 : 0;
-    }
-    else if (tokens[i].type == TokenType::NUMBER)
-    {
-      state = std::stoi(tokens[i].value) ? 1 : 0;
-    }
-    else if (tokens[i].type == TokenType::IDENTIFIER && _variables.count(tokens[i].value))
-    {
-      state = _variables[tokens[i].value] ? 1 : 0;
-    }
-  }
-
-  if (!pin_found || state < 0)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter,
-                        "I2C WRITE PIN: sintaxis invalida. Uso: I2C WRITE PIN=<alias|0-7> <HIGH|LOW>");
-    return;
-  }
-
-  esp_err_t err = expander_pin_write(pin, state == 1);
-  if (err != ESP_OK)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter,
-                        "I2C WRITE PIN: error escribiendo pin %d: %s", pin, esp_err_to_name(err));
-    return;
+    for (int32_t i = 0; i < combine; i++)
+      result = (result << 8) | rx_buf[i];
   }
 
   StrideLogger::Log(StrideSubsystem::Interpreter,
-                    "I2C WRITE PIN=%d -> %s", pin, state ? "HIGH" : "LOW");
-}
+                    "I2C read addr=0x%02X reg=0x%02X size=%d -> %s = %d",
+                    (unsigned)addr, reg, (int)bytes, stmt.name.c_str(),
+                    (int)result);
 
-void Interpreter::execute_expander_pin_read(const std::vector<Token> &tokens)
-{
-  uint8_t pin = 0;
-  bool pin_found = false;
-  std::string varName = "";
-
-  for (size_t i = 1; i < tokens.size(); i++)
-  {
-    if (tokens[i].type == TokenType::PIN &&
-        i + 2 < tokens.size() &&
-        tokens[i + 1].type == TokenType::ASSIGN)
-    {
-      if (!resolve_expander_pin(tokens[i + 2], pin))
-      {
-        StrideLogger::Error(StrideSubsystem::Interpreter,
-                            "I2C READ PIN: '%s' no es un alias EXPIN ni un pin 0-7",
-                            tokens[i + 2].value.c_str());
-        return;
-      }
-      pin_found = true;
-      i += 2;
-      continue;
-    }
-
-    if (tokens[i].type == TokenType::ARROW && i + 1 < tokens.size())
-    {
-      varName = tokens[i + 1].value;
-    }
-  }
-
-  if (!pin_found)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter,
-                        "I2C READ PIN: sintaxis invalida. Uso: I2C READ PIN=<alias|0-7> [-> <var>]");
-    return;
-  }
-
-  bool level = false;
-  esp_err_t err = expander_pin_read(pin, level);
-  if (err != ESP_OK)
-  {
-    StrideLogger::Error(StrideSubsystem::Interpreter,
-                        "I2C READ PIN: error leyendo pin %d: %s", pin, esp_err_to_name(err));
-    return;
-  }
-
-  int result = level ? 1 : 0;
-  StrideLogger::Log(StrideSubsystem::Interpreter,
-                    "I2C READ PIN=%d -> %d (var='%s')", pin, result, varName.c_str());
-
-  if (!varName.empty())
-    _variables[varName] = result;
+  _variables[stmt.name] = result;
 }

@@ -24,6 +24,17 @@ public:
           if (name.empty())
             _finished = true;
         });
+
+    _show_subscription = Blackboard::DslShowText.subscribe(
+        [this](const std::string &message)
+        {
+          if (message.empty())
+            return;
+          for (int i = 0; i < kShowLines - 1; i++)
+            _show_lines[i] = _show_lines[i + 1];
+          _show_lines[kShowLines - 1] = message;
+          _show_dirty = true;
+        });
   }
 
   void on_update(Display &ctx) override
@@ -41,11 +52,18 @@ public:
     _spinner_step = (_spinner_step + 1) % 8;
     draw_spinner(ctx);
     draw_elapsed(ctx);
+
+    if (_show_dirty)
+    {
+      _show_dirty = false;
+      draw_show_lines(ctx);
+    }
   }
 
   void on_exit(Display &ctx) override
   {
     _running_subscription.unsubscribe();
+    _show_subscription.unsubscribe();
   }
 
   StateType get_type() const override { return StateType::Running; }
@@ -104,10 +122,34 @@ private:
     tft.drawCenterString(buf, w / 2, h - 20);
   }
 
+  // Last lines emitted by the DSL `show` command, below the spinner.
+  void draw_show_lines(Display &ctx)
+  {
+    auto &tft = ctx.getTFT();
+    int32_t w = tft.width();
+
+    tft.fillRect(0, 146, w, kShowLines * 12 + 4, TFT_BLACK);
+    tft.setTextColor(TFT_CYAN, TFT_BLACK);
+    tft.setTextSize(1);
+
+    for (int i = 0; i < kShowLines; i++)
+    {
+      std::string line = _show_lines[i];
+      if (line.size() > 28)
+        line = line.substr(0, 25) + "...";
+      tft.drawCenterString(line.c_str(), w / 2, 148 + i * 12);
+    }
+  }
+
+  static constexpr int kShowLines = 4;
+
   std::string _program_name;
   uint32_t _start_ms = 0;
   uint32_t _last_anim_ms = 0;
   int _spinner_step = 0;
   volatile bool _finished = false;
+  volatile bool _show_dirty = false;
+  std::string _show_lines[kShowLines];
   StrideSubscription _running_subscription;
+  StrideSubscription _show_subscription;
 };

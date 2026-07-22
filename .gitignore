@@ -70,3 +70,6 @@ compile_commands.json
 
 # Tests
 *.o
+
+# Test binary
+core/tests/run_tests

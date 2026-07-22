@@ -27,7 +27,7 @@ La pieza clave de la arquitectura es que añadir hardware, endpoints, vistas o c
     │   └── utils/           # Helpers (parse, timer, sink, hexer)
     ├── plugin/              # Componentes reutilizables (cada uno es un IDF component)
     │   ├── io/              # Drivers de periféricos: LED, botón, buzzer (StrideBase)
-    │   ├── lexer/           # Lexer del DSL .str
+    │   ├── lang/            # Lexer + parser (AST) del DSL .str
     │   ├── logger/          # Logger por subsistema
     │   ├── observer/        # StrideObservable / StrideSubscription
     │   └── locator/         # Service locator tipado
@@ -35,7 +35,7 @@ La pieza clave de la arquitectura es que añadir hardware, endpoints, vistas o c
     └── tests/               # Tests unitarios sobre PC
 ```
 
-`core/src/CMakeLists.txt` registra `core/src` como **componente principal** y declara como dependencias (`REQUIRES`) los plugins (`logger`, `io`, `observer`, `lexer`, `locator`). El `CMakeLists.txt` raíz expone los tres directorios de componentes (`core/src`, `core/external`, `core/plugin`) vía `EXTRA_COMPONENT_DIRS`.
+`core/src/CMakeLists.txt` registra `core/src` como **componente principal** y declara como dependencias (`REQUIRES`) los plugins (`logger`, `io`, `observer`, `lang`, `locator`). El `CMakeLists.txt` raíz expone los tres directorios de componentes (`core/src`, `core/external`, `core/plugin`) vía `EXTRA_COMPONENT_DIRS`.
 
 ---
 
@@ -65,7 +65,7 @@ El sistema se organiza en **capas**, cada una con una responsabilidad clara y co
               │   blackboard.hpp │         │    core/plugin/    │
               │ (estado global + │         │  io · observer ·   │
               │   observables)   │         │  logger · locator  │
-              └──────────────────┘         │       · lexer      │
+              └──────────────────┘         │       · lang       │
                                            └────────────────────┘
 ```
 
@@ -86,8 +86,8 @@ Toda la arquitectura se apoya en **cinco patrones** que conviene entender antes 
 - **[network/](core/src/brain/network/)** — Inicializa WiFi (modo AP + STA), persiste credenciales en NVS, controla el LED de red.
 - **[server/](core/src/brain/server/)** — Servidor HTTP. Mantiene la lista de `Handler`s y los registra en `httpd`. La función `load_handlers()` decide qué endpoints están activos según `Blackboard::CurrentServerMode` (Developer vs Production).
 - **[display/](core/src/brain/display/)** — Pantalla TFT (LovyanGFX) gestionada con una **máquina de estados** (`DisplayBaseState`: `Startup`, `Main`, `View`, `Running`). El singleton `Display::Instance()` posee el TFT y el estado activo; las transiciones se hacen con `Display::transition_to(...)`.
-- **[interpreter/](core/src/brain/interpreter/)** — Intérprete del DSL `.str`. Singleton que recorre los `Token`s del `lexer` y ejecuta comandos sobre el hardware (LEDs, botones, buzzer, I2C).
-- **[expander/](core/src/brain/expander/)** — Bus I2C maestro para los módulos expansores. La abstracción de pin lógico del expansor PCF8574 (`expin`, `i2c write pin=...`, `i2c read pin=...`) vive en [tasks/expander_task.cc](core/src/tasks/expander_task.cc) y en los helpers `execute_expander_pin_*` del intérprete.
+- **[interpreter/](core/src/brain/interpreter/)** — Intérprete del DSL `.str`. Singleton *tree-walking* que recorre el AST producido por el parser de `lang` y ejecuta las sentencias sobre el hardware (LEDs, botones, buzzer, expansor, I2C). Registra los bloques `when`/`every` como *handlers* y, al acabar el flujo secuencial, entra en un bucle de despacho de eventos.
+- **[expander/](core/src/brain/expander/)** — Bus I2C maestro para los módulos expansores. La abstracción de pin lógico del expansor PCF8574 (`pin <nombre> on expander <n>` en el DSL) vive en [tasks/expander_task.cc](core/src/tasks/expander_task.cc); el intérprete los expone como dispositivos normales en su registro unificado (`turn`/`toggle`/lectura).
 - **[bus/](core/src/brain/bus/)** — Constantes y `spi_sd_init()` para SD y TFT.
 - **[apps/](core/src/brain/apps/)** — `AppManager` escanea la SD y mantiene la lista de programas disponibles.
 
@@ -109,11 +109,11 @@ Cada plugin es un **componente IDF independiente** con su propio `CMakeLists.txt
 - **observer/** — Plantillas `StrideObservable<T>` y `StrideSubscription` (RAII).
 - **logger/** — Logger con enumerado `StrideSubsystem`.
 - **locator/** — Mapa `type_index → void*` para inyección de servicios.
-- **lexer/** — Tokenizador del DSL (`Token`, `tokenize()`).
+- **lang/** — Lenguaje del DSL: lexer (`lang::lex()`) y parser (`lang::parse()` → AST `lang::Program` + lista de errores con línea). C++ puro sin dependencias de ESP-IDF, por eso se testea en PC.
 
 ### DSL `.str` y archivos en SD
 
-El usuario final no programa C++: escribe scripts `.str` que se almacenan en la SD y se editan vía la web (`/editor`, `/view`, `/browser`). El flujo es: `AppManager` escanea la SD → la pantalla muestra los programas → al seleccionar uno, `read_card_task` lo lee, lo tokeniza con `lexer` y lo ejecuta con `Interpreter`.
+El usuario final no programa C++: escribe scripts `.str` que se almacenan en la SD y se editan vía la web (`/editor`, `/view`, `/browser`). El flujo es: `AppManager` escanea la SD → la pantalla muestra los programas → al seleccionar uno, `read_card_task` lee el archivo completo, lo parsea con `lang::parse()` y, si no hay errores, lo ejecuta con `Interpreter`. Si hay errores de sintaxis, se listan con su línea en el log y el programa no se ejecuta (el endpoint `/save` hace la misma validación al guardar). La referencia del lenguaje está en [docs/dsl.md](docs/dsl.md).
 
 ---
 
@@ -161,10 +161,12 @@ La pantalla es una **máquina de estados**. Cada estado implementa [DisplayBaseS
 
 ### 5. Añadir un comando al DSL (`.str`)
 
-1. **Lexer** — añade el `TokenType` en [core/plugin/lexer/include/lexer.hpp](core/plugin/lexer/include/lexer.hpp), su rama en `get_type()`, y la regla de tokenización en [lexer.cc](core/plugin/lexer/lexer.cc).
-2. **Intérprete** — declara `execute_mi_comando(const std::vector<Token>&)` en [interpreter.hpp](core/src/brain/interpreter/interpreter.hpp) e impleméntala en [interpreter.cc](core/src/brain/interpreter/interpreter.cc). Engánchala en el dispatch principal de `execute_simple_block_command` / `execute_range`.
-3. Si el comando habla con I2C, sigue el patrón de los helpers `execute_I2C_*` ya existentes.
-4. Si el comando opera sobre el **expansor PCF8574** a nivel de pin, usa las funciones `expander_pin_write` / `expander_pin_read` declaradas en [expander_task.hpp](core/src/tasks/include/expander_task.hpp) — mantienen una *shadow copy* del byte del chip para no pisar los demás pines al modificar uno. Los alias declarados con `expin` se guardan en `Interpreter::_expander_pins`.
+1. **Lexer** — si el comando necesita una palabra clave nueva, añade el `TokKind` en [core/plugin/lang/include/lang_token.hpp](core/plugin/lang/include/lang_token.hpp), su entrada en el mapa `keywords` y en `tok_kind_name()` de [lexer.cc](core/plugin/lang/lexer.cc). Si la palabra solo tiene sentido dentro de tu comando (como `register` o `into`), déjala como `Name` y reconócela contextualmente en el parser (`accept_word("...")`): así sigue siendo usable como nombre de variable.
+2. **Parser** — añade el `Stmt::Kind` en [lang_ast.hpp](core/plugin/lang/include/lang_ast.hpp) y una función `parse_mi_comando()` en [parser.cc](core/plugin/lang/parser.cc), enganchada al `switch` de `parse_statement_into()`. Reporta los errores con `error(line, "mensaje claro en español")`.
+3. **Tests** — cubre el comando (forma válida + errores) en [core/tests/parser_test.cc](core/tests/parser_test.cc); corre `make && ./run_tests` en `core/tests` (no necesita ESP-IDF).
+4. **Intérprete** — añade el caso en el `switch` de `exec_stmt()` ([interpreter_exec.cc](core/src/brain/interpreter/interpreter_exec.cc)) e implementa la ejecución. Usa `eval(expr)` para los argumentos y `runtime_error(line, ...)` para los fallos en caliente.
+5. Si el comando habla con I2C, sigue el patrón de [interpreter_i2c.cc](core/src/brain/interpreter/interpreter_i2c.cc). Si opera sobre el **expansor PCF8574**, usa `expander_pin_write` / `expander_pin_read` de [expander_task.hpp](core/src/tasks/include/expander_task.hpp) — mantienen una *shadow copy* del byte del chip.
+6. **Documentación** — actualiza [docs/dsl.md](docs/dsl.md) **y** su espejo HTML embebido en [core/src/handler/librarie.cc](core/src/handler/librarie.cc).
 
 ### 6. Añadir configuración global
 

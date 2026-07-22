@@ -1,488 +1,249 @@
-#include <iostream>
-#include <vector>
 #include <string>
-#include <cassert>
+#include <vector>
 
-#include "lexer.hpp"
-#include "liner.hpp"
+#include "lang_lexer.hpp"
 
 #include "check.hpp"
 
-void testKeywordTokens(TestRunner &runner)
+using lang::lex;
+using lang::TokKind;
+
+static void testKeywordsCaseInsensitive(TestRunner &runner)
 {
-  runner.setTest("Test Keywords");
+  runner.setTest("Lexer: keywords case-insensitive");
 
-  auto tokens = tokenize("device write read if endif");
+  auto tokens = lex("REPEAT End wHen TURN toggle");
 
-  check_token(runner, tokens[0], TokenType::DEVICE, "device", "device");
-  check_token(runner, tokens[1], TokenType::WRITE, "write", "write");
-  check_token(runner, tokens[2], TokenType::READ, "read", "read");
-  check_token(runner, tokens[3], TokenType::IF, "if", "if");
-  check_token(runner, tokens[4], TokenType::ENDIF, "endif", "endif");
+  check_token(runner, tokens[0], TokKind::KwRepeat, "REPEAT", "repeat");
+  check_token(runner, tokens[1], TokKind::KwEnd, "End", "end");
+  check_token(runner, tokens[2], TokKind::KwWhen, "wHen", "when");
+  check_token(runner, tokens[3], TokKind::KwTurn, "TURN", "turn");
+  check_token(runner, tokens[4], TokKind::KwToggle, "toggle", "toggle");
 }
 
-void testIdentifierTokens(TestRunner &runner)
+static void testAllStatementKeywords(TestRunner &runner)
 {
-  runner.setTest("Test Identifiers");
+  runner.setTest("Lexer: statement keywords");
 
-  auto tokens = tokenize("myLed temp sensor_1");
+  auto tokens = lex("led button buzzer pin set wait print show log stop "
+                    "if else end repeat forever while until when every i2c");
 
-  check_token(runner, tokens[0], TokenType::IDENTIFIER, "myLed", "identifier 1");
-  check_token(runner, tokens[1], TokenType::IDENTIFIER, "temp", "identifier 2");
-  check_token(runner, tokens[2], TokenType::IDENTIFIER, "sensor_1", "identifier 3");
+  TokKind expected[] = {
+      TokKind::KwLed, TokKind::KwButton, TokKind::KwBuzzer, TokKind::KwPin,
+      TokKind::KwSet, TokKind::KwWait, TokKind::KwPrint, TokKind::KwShow,
+      TokKind::KwLog, TokKind::KwStop, TokKind::KwIf, TokKind::KwElse,
+      TokKind::KwEnd, TokKind::KwRepeat, TokKind::KwForever, TokKind::KwWhile,
+      TokKind::KwUntil, TokKind::KwWhen, TokKind::KwEvery, TokKind::KwI2c};
+
+  for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); i++)
+    check(runner, tokens[i].kind == expected[i],
+          std::string("keyword #") + std::to_string(i) + " (" +
+              tokens[i].text + ")");
 }
 
-void testNumberTokens(TestRunner &runner)
+static void testExpressionKeywords(TestRunner &runner)
 {
-  runner.setTest("Test Numbers");
+  runner.setTest("Lexer: expression keywords");
 
-  auto tokens = tokenize("123 0xFF 42");
+  auto tokens = lex("on off and or not is pressed released signed16");
 
-  check_token(runner, tokens[0], TokenType::NUMBER, "123", "number 1");
-  check_token(runner, tokens[1], TokenType::HEX_NUMBER, "0xFF", "hex number");
-  check_token(runner, tokens[2], TokenType::NUMBER, "42", "number 2");
+  check(runner, tokens[0].kind == TokKind::KwOn, "on");
+  check(runner, tokens[1].kind == TokKind::KwOff, "off");
+  check(runner, tokens[2].kind == TokKind::KwAnd, "and");
+  check(runner, tokens[3].kind == TokKind::KwOr, "or");
+  check(runner, tokens[4].kind == TokKind::KwNot, "not");
+  check(runner, tokens[5].kind == TokKind::KwIs, "is");
+  check(runner, tokens[6].kind == TokKind::KwPressed, "pressed");
+  check(runner, tokens[7].kind == TokKind::KwReleased, "released");
+  check(runner, tokens[8].kind == TokKind::KwSigned16, "signed16");
 }
 
-void testAssignmentTokens(TestRunner &runner)
+static void testContextualWordsAreNames(TestRunner &runner)
 {
-  runner.setTest("Test Assignment");
+  runner.setTest("Lexer: contextual words are identifiers");
 
-  auto tokens = tokenize("a = 5  3 -> b");
+  // These must stay usable as variable names: the parser gives them meaning
+  // only in their statement context.
+  auto tokens = lex("to times register value size into expander ms s min "
+                    "write read little endian");
 
-  check_token(runner, tokens[0], TokenType::IDENTIFIER, "a", "identifier");
-  check_token(runner, tokens[1], TokenType::ASSIGN, "=", "assign");
-  check_token(runner, tokens[2], TokenType::NUMBER, "5", "value");
-
-  check_token(runner, tokens[3], TokenType::NUMBER, "3", "value 2");
-  check_token(runner, tokens[4], TokenType::ARROW, "->", "arrow");
-  check_token(runner, tokens[5], TokenType::IDENTIFIER, "b", "target");
+  for (size_t i = 0; i < 14; i++)
+    check(runner, tokens[i].kind == TokKind::Name,
+          "contextual word '" + tokens[i].text + "' is a Name");
 }
 
-void testComparisonTokens(TestRunner &runner)
+static void testIdentifiers(TestRunner &runner)
 {
-  runner.setTest("Test Comparisons");
+  runner.setTest("Lexer: identifiers");
 
-  auto tokens = tokenize("a == b a != b a < b a <= b a > b a >= b");
+  auto tokens = lex("myLed temp sensor_1 _hidden");
 
-  check_token(runner, tokens[1], TokenType::IS_EQUAL, "==", "==");
-  check_token(runner, tokens[4], TokenType::NOT_EQUAL, "!=", "!=");
-  check_token(runner, tokens[7], TokenType::LESS_THAN, "<", "<");
-  check_token(runner, tokens[10], TokenType::LESS_EQUAL, "<=", "<=");
-  check_token(runner, tokens[13], TokenType::GREATER_THAN, ">", ">");
-  check_token(runner, tokens[16], TokenType::GREATER_EQUAL, ">=", ">=");
+  check_token(runner, tokens[0], TokKind::Name, "myLed", "identifier 1");
+  check_token(runner, tokens[1], TokKind::Name, "temp", "identifier 2");
+  check_token(runner, tokens[2], TokKind::Name, "sensor_1", "identifier 3");
+  check_token(runner, tokens[3], TokKind::Name, "_hidden", "identifier 4");
 }
 
-void testValueTokens(TestRunner &runner)
+static void testNumbers(TestRunner &runner)
 {
-  runner.setTest("Test Values");
+  runner.setTest("Lexer: numbers");
 
-  auto tokens = tokenize("on OFF");
+  auto tokens = lex("123 0xFF 0X1b 42");
 
-  check_token(runner, tokens[0], TokenType::VALUE, "on", "value on");
-  check_token(runner, tokens[1], TokenType::VALUE, "OFF", "value off");
+  check_token(runner, tokens[0], TokKind::Number, "123", "decimal");
+  check(runner, tokens[0].num, 123, "decimal value");
+  check_token(runner, tokens[1], TokKind::Number, "0xFF", "hex");
+  check(runner, tokens[1].num, 255, "hex value");
+  check_token(runner, tokens[2], TokKind::Number, "0X1b", "hex mixed case");
+  check(runner, tokens[2].num, 27, "hex mixed case value");
+  check_token(runner, tokens[3], TokKind::Number, "42", "decimal 2");
 }
 
-void testPrintTokens(TestRunner &runner)
+static void testDecimalLiteral(TestRunner &runner)
 {
-  runner.setTest("Test Print");
+  runner.setTest("Lexer: decimal literal");
 
-  auto tokens = tokenize("print \"hola mundo\"");
+  auto tokens = lex("1.5 0.25");
 
-  check_token(runner, tokens[0], TokenType::PRINT, "print", "print");
-  check_token(runner, tokens[1], TokenType::STRING, "hola mundo", "string message");
+  check_token(runner, tokens[0], TokKind::Decimal, "1.5", "1.5");
+  check_token(runner, tokens[1], TokKind::Decimal, "0.25", "0.25");
 }
 
-void testI2CTokens(TestRunner &runner)
+static void testGluedUnitIsUnknown(TestRunner &runner)
 {
-  runner.setTest("Test I2C");
+  runner.setTest("Lexer: number glued to letters");
 
-  auto tokens = tokenize("i2c read 0x76 0xFA 3 -> temp");
+  auto tokens = lex("5s 12abc");
 
-  check_token(runner, tokens[0], TokenType::I2C, "i2c", "i2c");
-  check_token(runner, tokens[1], TokenType::READ, "read", "read");
-  check_token(runner, tokens[2], TokenType::HEX_NUMBER, "0x76", "addr");
-  check_token(runner, tokens[3], TokenType::HEX_NUMBER, "0xFA", "register");
-  check_token(runner, tokens[4], TokenType::NUMBER, "3", "length");
-  check_token(runner, tokens[5], TokenType::ARROW, "->", "arrow");
-  check_token(runner, tokens[6], TokenType::IDENTIFIER, "temp", "target");
+  check_token(runner, tokens[0], TokKind::Unknown, "5s", "5s");
+  check_token(runner, tokens[1], TokKind::Unknown, "12abc", "12abc");
 }
 
-void testDeviceLedDeclaration(TestRunner &runner)
+static void testComments(TestRunner &runner)
 {
-  runner.setTest("Device declaration");
+  runner.setTest("Lexer: comments");
 
-  auto tokens = tokenize("device=led name=myLed pin=16");
+  auto tokens = lex("turn light on # esto es un comentario\n# linea entera");
 
-  check_token(runner, tokens[0], TokenType::DEVICE, "device", "device");
-  check_token(runner, tokens[2], TokenType::LED, "led", "led");
-  check_token(runner, tokens[3], TokenType::NAME, "name", "name");
-  check_token(runner, tokens[5], TokenType::IDENTIFIER, "myLed", "identifier");
-
-  check_token(runner, tokens[6], TokenType::PIN, "pin", "pin");
-  check_token(runner, tokens[8], TokenType::NUMBER, "16", "number");
+  check(runner, tokens[0].kind == TokKind::KwTurn, "turn");
+  check(runner, tokens[1].kind == TokKind::Name, "light");
+  check(runner, tokens[2].kind == TokKind::KwOn, "on");
+  check(runner, tokens[3].kind == TokKind::Eol, "eol after comment");
+  check(runner, tokens[4].kind == TokKind::Eol, "eol of comment-only line");
+  check(runner, tokens[5].kind == TokKind::Eof, "eof");
 }
 
-void testDeviceBuzzerDeclaration(TestRunner &runner)
+static void testLineNumbers(TestRunner &runner)
 {
-  runner.setTest("Device declaration");
+  runner.setTest("Lexer: line numbers");
 
-  auto tokens = tokenize("device=buzzer name=mybuz pin=14");
+  auto tokens = lex("a = 1\n\nb = 2");
 
-  check_token(runner, tokens[0], TokenType::DEVICE, "device", "device");
-  check_token(runner, tokens[2], TokenType::BUZZER, "buzzer", "buzzer");
-  check_token(runner, tokens[3], TokenType::NAME, "name", "name");
-  check_token(runner, tokens[5], TokenType::IDENTIFIER, "mybuz", "identifier");
-
-  check_token(runner, tokens[6], TokenType::PIN, "pin", "pin");
-  check_token(runner, tokens[8], TokenType::NUMBER, "14", "number");
+  check(runner, tokens[0].line == 1, "a on line 1");
+  check(runner, tokens[0].text, std::string("a"), "first token is a");
+  // tokens: a = 1 EOL EOL b = 2 EOL EOF
+  check(runner, tokens[5].text, std::string("b"), "token 5 is b");
+  check(runner, tokens[5].line == 3, "b on line 3");
 }
 
-void testDeviceButtonDeclaration(TestRunner &runner)
+static void testStrings(TestRunner &runner)
 {
-  runner.setTest("Device declaration");
+  runner.setTest("Lexer: strings");
 
-  auto tokens = tokenize("device=button name=myButton pin=16");
+  auto tokens = lex("print \"hola mundo\" \"\"");
 
-  check_token(runner, tokens[0], TokenType::DEVICE, "device", "device");
-  check_token(runner, tokens[2], TokenType::BUTTON, "button", "button");
-  check_token(runner, tokens[3], TokenType::NAME, "name", "name");
-  check_token(runner, tokens[5], TokenType::IDENTIFIER, "myButton", "identifier");
-
-  check_token(runner, tokens[6], TokenType::PIN, "pin", "pin");
-  check_token(runner, tokens[8], TokenType::NUMBER, "16", "number");
+  check_token(runner, tokens[1], TokKind::String, "hola mundo", "string");
+  check_token(runner, tokens[2], TokKind::String, "", "empty string");
 }
 
-void testProgramScenarios(TestRunner &runner)
+static void testUnclosedString(TestRunner &runner)
 {
-  runner.setTest("Test Program Scenarios");
+  runner.setTest("Lexer: unclosed string");
 
-  auto t0 = tokenize("device=led name=mL pin=17");
-  auto t1 = tokenize("device=button name=mB pin=35");
-  auto t2 = tokenize("loop -1");
-  auto t3 = tokenize("if mB == 1");
-  auto t4 = tokenize("write=mL on");
-  auto t5 = tokenize("else");
-  auto t6 = tokenize("write=mL off");
-  auto t7 = tokenize("endif");
-  auto t8 = tokenize("dloop");
+  auto tokens = lex("print \"sin cerrar");
 
-  check_token(runner, t0[0], TokenType::DEVICE, "device", "device keyword");
-  check_token(runner, t0[2], TokenType::LED, "led", "led type");
-  check_token(runner, t2[0], TokenType::LOOP, "loop", "loop keyword");
-  check_token(runner, t3[0], TokenType::IF, "if", "if keyword");
-  check_token(runner, t3[2], TokenType::IS_EQUAL, "==", "equal operator");
-  check_token(runner, t4[0], TokenType::WRITE, "write", "write command");
-  check_token(runner, t7[0], TokenType::ENDIF, "endif", "endif keyword");
-  check_token(runner, t8[0], TokenType::DLOOP, "dloop", "dloop at the end");
-}
-void testParenthesesTokens(TestRunner &runner)
-{
-  runner.setTest("Test Parentheses");
-
-  auto tokens = tokenize("result = (a + b) * c");
-
-  check(runner, tokens.size(), static_cast<size_t>(9), "exactamente 9 tokens");
-  check_token(runner, tokens[2], TokenType::LPAREN, "(", "lparen");
-  check_token(runner, tokens[6], TokenType::RPAREN, ")", "rparen");
-  check_token(runner, tokens[7], TokenType::MUL,    "*", "mul after rparen");
+  check(runner, tokens[1].kind == TokKind::Unknown, "unclosed is Unknown");
 }
 
-void testI2CReadLETokens(TestRunner &runner)
+static void testArrowIsUnknown(TestRunner &runner)
 {
-  runner.setTest("Test I2C READLE");
+  runner.setTest("Lexer: old arrow operator");
 
-  auto tokens = tokenize("i2c readle 0x76 0x88 2 -> dig_T1");
+  auto tokens = lex("0 -> counter");
 
-  check(runner, tokens.size(), static_cast<size_t>(7), "exactamente 7 tokens");
-  check_token(runner, tokens[0], TokenType::I2C,        "i2c",    "i2c");
-  check_token(runner, tokens[1], TokenType::READLE,     "readle", "readle");
-  check_token(runner, tokens[2], TokenType::HEX_NUMBER, "0x76",   "addr");
-  check_token(runner, tokens[3], TokenType::HEX_NUMBER, "0x88",   "register");
-  check_token(runner, tokens[4], TokenType::NUMBER,     "2",      "bytes");
-  check_token(runner, tokens[5], TokenType::ARROW,      "->",     "arrow");
-  check_token(runner, tokens[6], TokenType::IDENTIFIER, "dig_T1", "target");
+  check_token(runner, tokens[1], TokKind::Unknown, "->", "arrow is Unknown");
 }
 
-void testSign16Tokens(TestRunner &runner)
+static void testOperators(TestRunner &runner)
 {
-  runner.setTest("Test SIGN16");
+  runner.setTest("Lexer: operators");
 
-  auto tokens = tokenize("sign16 dig_T2");
+  auto tokens = lex("= + - * / % << >> & | == != < <= > >= ( )");
 
-  check(runner, tokens.size(), static_cast<size_t>(2), "exactamente 2 tokens");
-  check_token(runner, tokens[0], TokenType::SIGN16,     "sign16", "sign16 keyword");
-  check_token(runner, tokens[1], TokenType::IDENTIFIER, "dig_T2", "variable");
+  TokKind expected[] = {
+      TokKind::Assign, TokKind::Plus, TokKind::Minus, TokKind::Star,
+      TokKind::Slash, TokKind::Percent, TokKind::Shl, TokKind::Shr,
+      TokKind::Amp, TokKind::Pipe, TokKind::Eq, TokKind::Neq,
+      TokKind::Lt, TokKind::Le, TokKind::Gt, TokKind::Ge,
+      TokKind::LParen, TokKind::RParen};
+
+  for (size_t i = 0; i < sizeof(expected) / sizeof(expected[0]); i++)
+    check(runner, tokens[i].kind == expected[i],
+          std::string("operator #") + std::to_string(i) + " (" +
+              tokens[i].text + ")");
 }
 
-void testSign16UpperCase(TestRunner &runner)
+static void testShiftNotConfusedWithComparison(TestRunner &runner)
 {
-  runner.setTest("Test SIGN16 uppercase");
+  runner.setTest("Lexer: shift vs comparison");
 
-  auto tokens = tokenize("SIGN16 myVar");
+  auto tokens = lex("a << 1 b <= 1 c >> 1 d >= 1");
 
-  check(runner, tokens.size(), static_cast<size_t>(2), "exactamente 2 tokens");
-  check_token(runner, tokens[0], TokenType::SIGN16,     "SIGN16", "sign16 uppercase");
-  check_token(runner, tokens[1], TokenType::IDENTIFIER, "myVar",  "variable");
+  check(runner, tokens[1].kind == TokKind::Shl, "<<");
+  check(runner, tokens[4].kind == TokKind::Le, "<=");
+  check(runner, tokens[7].kind == TokKind::Shr, ">>");
+  check(runner, tokens[10].kind == TokKind::Ge, ">=");
 }
 
-void testInvalidTokens(TestRunner &runner)
+static void testEmptyInput(TestRunner &runner)
 {
-  runner.setTest("Test Invalid Tokens");
+  runner.setTest("Lexer: empty input");
 
-  auto tokens = tokenize("@ @@ ###");
+  auto tokens = lex("");
 
-  check(runner, tokens.size() > 0, true, "tokens generated");
-
-  for (const auto &t : tokens)
-  {
-    check(runner, t.type, TokenType::UNKNOWN, "invalid token detected");
-  }
+  check(runner, tokens.size(), static_cast<size_t>(2), "only Eol + Eof");
+  check(runner, tokens[0].kind == TokKind::Eol, "eol");
+  check(runner, tokens[1].kind == TokKind::Eof, "eof");
 }
 
-void testInvalidHex(TestRunner &runner)
+static void testGarbage(TestRunner &runner)
 {
-  runner.setTest("Test Invalid Hex");
+  runner.setTest("Lexer: garbage characters");
 
-  auto tokens = tokenize("0x 0xG1 0xZZ");
-  check(runner, tokens.size() > 0, true, "tokens exist");
-  for (const auto &t : tokens)
-  {
-    check(runner, t.type == TokenType::HEX_NUMBER, false, "invalid hex should not be valid");
-  }
+  auto tokens = lex("@ $ ?");
+
+  check(runner, tokens[0].kind == TokKind::Unknown, "@");
+  check(runner, tokens[1].kind == TokKind::Unknown, "$");
+  check(runner, tokens[2].kind == TokKind::Unknown, "?");
 }
 
-void testUnclosedString(TestRunner &runner)
+void run_lexer_tests(TestRunner &runner)
 {
-  runner.setTest("Test Unclosed String");
-
-  auto tokens = tokenize("print \"hola");
-  check(runner, tokens.size() > 0, true, "tokens exist");
-  check(runner, tokens[1].type == TokenType::STRING, false, "string should be invalid");
-}
-
-void testInvalidOperators(TestRunner &runner)
-{
-  runner.setTest("Test Invalid Operators");
-
-  auto tokens = tokenize("a === b a <> b a => b");
-  for (const auto &t : tokens)
-  {
-    check(runner, t.type == TokenType::IS_EQUAL, false, "invalid operator should fail");
-  }
-}
-
-void testBrokenAssignments(TestRunner &runner)
-{
-  runner.setTest("Test Broken Assignments");
-  auto tokens = tokenize("= 5");
-
-  check(runner, tokens[0].type, TokenType::ASSIGN, "Token = detectado");
-  check(runner, tokens[1].type, TokenType::NUMBER, "Token 5 detectado");
-
-  bool isValidSequence = (tokens.size() >= 3);
-  check(runner, isValidSequence, false, "La secuencia es demasiado corta para ser una asignación");
-}
-
-void testInvalidKeywords(TestRunner &runner)
-{
-  runner.setTest("Test Invalid Keywords");
-  auto tokens = tokenize("outpu writ reaad iff endiff");
-  for (const auto &t : tokens)
-  {
-    check(runner, t.type == TokenType::DEVICE, false, "typo keyword");
-    check(runner, t.type == TokenType::WRITE, false, "typo keyword");
-  }
-}
-
-void testWeirdSpacing(TestRunner &runner)
-{
-  runner.setTest("Test Weird Spacing");
-  auto tokens = tokenize("a=5    b   =    6");
-  check(runner, tokens.size() > 0, true, "tokens exist");
-  check_token(runner, tokens[0], TokenType::IDENTIFIER, "a", "a");
-  check_token(runner, tokens[1], TokenType::ASSIGN, "=", "=");
-  check_token(runner, tokens[2], TokenType::NUMBER, "5", "5");
-}
-
-void testEmptyInput(TestRunner &runner)
-{
-  runner.setTest("Test Empty Input");
-  auto tokens = tokenize("");
-  check(runner, tokens.size(), static_cast<size_t>(0), "empty input");
-}
-
-void testOnlyGarbage(TestRunner &runner)
-{
-  runner.setTest("Test Only Garbage");
-  auto tokens = tokenize("$$$$$");
-  for (const auto &t : tokens)
-  {
-    check(runner, t.type, TokenType::UNKNOWN, "garbage token");
-  }
-}
-
-void testArithmeticOperators(TestRunner &runner)
-{
-  runner.setTest("Test Arithmetic Operators");
-
-  auto tokens = tokenize("a + b a - b a * b a / b a % b");
-
-  check_token(runner, tokens[1], TokenType::ADD, "+", "+");
-  check_token(runner, tokens[4], TokenType::SUB, "-", "-");
-  check_token(runner, tokens[7], TokenType::MUL, "*", "*");
-  check_token(runner, tokens[10], TokenType::DIV, "/", "/");
-  check_token(runner, tokens[13], TokenType::MOD, "%", "%");
-}
-
-void testBitwiseOperators(TestRunner &runner)
-{
-  runner.setTest("Test Bitwise Operators");
-
-  auto tokens = tokenize("a & b a | b a << b a >> b");
-
-  check_token(runner, tokens[1], TokenType::BIT_AND, "&", "&");
-  check_token(runner, tokens[4], TokenType::BIT_OR, "|", "|");
-  check_token(runner, tokens[7], TokenType::SHL, "<<", "<<");
-  check_token(runner, tokens[10], TokenType::SHR, ">>", ">>");
-}
-
-void testArrowNotConfusedWithSub(TestRunner &runner)
-{
-  runner.setTest("Test Arrow Not Confused With Sub");
-
-  auto tokens = tokenize("3 -> b");
-
-  check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
-  check_token(runner, tokens[0], TokenType::NUMBER, "3", "numero");
-  check_token(runner, tokens[1], TokenType::ARROW, "->", "arrow");
-  check_token(runner, tokens[2], TokenType::IDENTIFIER, "b", "variable");
-}
-
-void testShrNotConfusedWithGreaterEqual(TestRunner &runner)
-{
-  runner.setTest("Test SHR Not Confused With >= or >");
-
-  auto tokens = tokenize("a >> 4");
-
-  check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
-  check_token(runner, tokens[0], TokenType::IDENTIFIER, "a", "variable");
-  check_token(runner, tokens[1], TokenType::SHR, ">>", "shr");
-  check_token(runner, tokens[2], TokenType::NUMBER, "4", "numero");
-}
-
-void testShlNotConfusedWithLessEqual(TestRunner &runner)
-{
-  runner.setTest("Test SHL Not Confused With <= or <");
-
-  auto tokens = tokenize("a << 4");
-
-  check(runner, tokens.size(), static_cast<size_t>(3), "exactamente 3 tokens");
-  check_token(runner, tokens[0], TokenType::IDENTIFIER, "a", "variable");
-  check_token(runner, tokens[1], TokenType::SHL, "<<", "shl");
-  check_token(runner, tokens[2], TokenType::NUMBER, "4", "numero");
-}
-
-void testExpressionAssignment(TestRunner &runner)
-{
-  runner.setTest("Test Expression Assignment");
-
-  auto tokens = tokenize("result = a + b");
-
-  check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
-  check_token(runner, tokens[0], TokenType::IDENTIFIER, "result", "variable destino");
-  check_token(runner, tokens[1], TokenType::ASSIGN, "=", "assign");
-  check_token(runner, tokens[2], TokenType::IDENTIFIER, "a", "operando izq");
-  check_token(runner, tokens[3], TokenType::ADD, "+", "operador");
-  check_token(runner, tokens[4], TokenType::IDENTIFIER, "b", "operando der");
-}
-
-void testExpressionWithHex(TestRunner &runner)
-{
-  runner.setTest("Test Expression With Hex");
-
-  auto tokens = tokenize("temp_raw = t_msb << 12");
-
-  check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
-  check_token(runner, tokens[0], TokenType::IDENTIFIER, "temp_raw", "variable destino");
-  check_token(runner, tokens[1], TokenType::ASSIGN, "=", "assign");
-  check_token(runner, tokens[2], TokenType::IDENTIFIER, "t_msb", "operando");
-  check_token(runner, tokens[3], TokenType::SHL, "<<", "shift left");
-  check_token(runner, tokens[4], TokenType::NUMBER, "12", "bits");
-}
-
-void testExpressionWithBitOr(TestRunner &runner)
-{
-  runner.setTest("Test Expression With Bit OR");
-
-  auto tokens = tokenize("temp_raw = temp_raw | t_lsb_s");
-
-  check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
-  check_token(runner, tokens[3], TokenType::BIT_OR, "|", "bit or");
-}
-
-void testNegativeNumberInExpression(TestRunner &runner)
-{
-  runner.setTest("Test Negative Number In Expression");
-
-  auto tokens = tokenize("a = b - 1");
-
-  check(runner, tokens.size(), static_cast<size_t>(5), "exactamente 5 tokens");
-  check_token(runner, tokens[3], TokenType::SUB, "-", "sub operator");
-  check_token(runner, tokens[4], TokenType::NUMBER, "1", "numero");
-}
-
-int main()
-{
-  TestRunner runner;
-
-  testKeywordTokens(runner);
-  testIdentifierTokens(runner);
-  testNumberTokens(runner);
-  testAssignmentTokens(runner);
-  testComparisonTokens(runner);
-  testPrintTokens(runner);
-  testI2CTokens(runner);
-  testDeviceLedDeclaration(runner);
-  testDeviceBuzzerDeclaration(runner);
-  testDeviceButtonDeclaration(runner);
-  testProgramScenarios(runner);
-
+  testKeywordsCaseInsensitive(runner);
+  testAllStatementKeywords(runner);
+  testExpressionKeywords(runner);
+  testContextualWordsAreNames(runner);
+  testIdentifiers(runner);
+  testNumbers(runner);
+  testDecimalLiteral(runner);
+  testGluedUnitIsUnknown(runner);
+  testComments(runner);
+  testLineNumbers(runner);
+  testStrings(runner);
   testUnclosedString(runner);
-  testInvalidTokens(runner);
-  testInvalidHex(runner);
-  testInvalidOperators(runner);
-  testBrokenAssignments(runner);
-  testInvalidKeywords(runner);
-  testWeirdSpacing(runner);
+  testArrowIsUnknown(runner);
+  testOperators(runner);
+  testShiftNotConfusedWithComparison(runner);
   testEmptyInput(runner);
-  testOnlyGarbage(runner);
-
-  testArithmeticOperators(runner);
-  testBitwiseOperators(runner);
-  testArrowNotConfusedWithSub(runner);
-  testShrNotConfusedWithGreaterEqual(runner);
-  testShlNotConfusedWithLessEqual(runner);
-  testExpressionAssignment(runner);
-  testExpressionWithHex(runner);
-  testExpressionWithBitOr(runner);
-  testNegativeNumberInExpression(runner);
-  testParenthesesTokens(runner);
-  testI2CReadLETokens(runner);
-  testSign16Tokens(runner);
-  testSign16UpperCase(runner);
-
-  std::cout << CYAN << "PASSED: " << runner.passed << std::endl;
-  std::cout << CYAN << "FAILED: " << runner.failed << std::endl;
-
-  if (!runner.failedMessages.empty())
-  {
-    std::cout << std::endl
-              << RED << "FAILED TESTS:" << RESET << std::endl;
-    for (const auto &msg : runner.failedMessages)
-    {
-      std::cout << RED << msg << RESET << std::endl;
-    }
-  }
-
-  return runner.allPassed() ? 0 : 1;
+  testGarbage(runner);
 }

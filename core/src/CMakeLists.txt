@@ -27,7 +27,7 @@ idf_component_register(
   "brain/display"
   "brain/display/include"
 
-  REQUIRES logger io observer lexer locator
+  REQUIRES logger io observer lang locator
   REQUIRES esp_wifi esp_netif esp_event nvs_flash esp_http_server lwip esp_timer
 
   PRIV_REQUIRES esp_driver_gpio driver fatfs sdmmc spi_flash LovyanGFX

@@ -293,7 +293,15 @@ function saveFile(file) {
     headers: {'Content-Type': 'text/plain'}
   })
     .then(function(r){ if(!r.ok) throw new Error(); return r.text(); })
-    .then(function(){ toast('Guardado'); })
+    .then(function(text){
+      if (text.indexOf('OK_WITH_ERRORS') === 0) {
+        var errors = text.substring(text.indexOf('\n') + 1);
+        toast('Guardado, pero el programa tiene errores', true);
+        alert('El programa se guardo, pero tiene errores:\n\n' + errors);
+      } else {
+        toast('Guardado');
+      }
+    })
     .catch(function(){ toast('Error al guardar', true); });
 }
 function deleteFile(file) {

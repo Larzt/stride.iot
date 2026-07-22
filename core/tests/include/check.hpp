@@ -1,8 +1,12 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
+
 #include "colors.hpp"
+#include "lang_token.hpp"
 
 struct TestRunner
 {
@@ -63,9 +67,9 @@ void check(TestRunner& tr,
   }
 }
 
-void check(TestRunner& tr,
-           bool condition,
-           const std::string& msg)
+inline void check(TestRunner& tr,
+                  bool condition,
+                  const std::string& msg)
 {
   if (!condition)
   {
@@ -77,12 +81,15 @@ void check(TestRunner& tr,
   }
 }
 
-void check_token(TestRunner& tr,
-                const Token &token,
-                TokenType type,
-                const std::string &value,
-                const std::string &msg)
+inline void check_token(TestRunner& tr,
+                        const lang::Token &token,
+                        lang::TokKind kind,
+                        const std::string &text,
+                        const std::string &msg)
 {
-  check(tr, token.type, type, msg + " (type)");
-  check(tr, token.value, value, msg + " (value)");
+  check(tr, token.kind == kind,
+        msg + " (kind) | expected: " + lang::tok_kind_name(kind) +
+            " got: " + lang::tok_kind_name(token.kind) +
+            " ('" + token.text + "')");
+  check(tr, token.text, text, msg + " (text)");
 }

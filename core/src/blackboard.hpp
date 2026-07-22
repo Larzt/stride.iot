@@ -49,6 +49,9 @@ struct Blackboard
 
   static inline StrideObservable<std::string> RunningProgramName{""};
 
+  // Last text emitted by the DSL `show` command (rendered by RunningState).
+  static inline StrideObservable<std::string> DslShowText{""};
+
   static void Reset()
   {
     IsNetConnected = false;
